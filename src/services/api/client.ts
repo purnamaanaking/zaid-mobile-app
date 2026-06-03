@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { deleteAuthToken, getAuthToken } from '@/src/services/storage/token';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://zaid-assist.my.id/api';
 
@@ -36,12 +36,12 @@ const emitUnauthorized = () => {
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const token = await SecureStore.getItemAsync('auth_token');
+      const token = await getAuthToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (e) {
-      console.warn('Could not read auth token from SecureStore', e);
+      console.warn('Could not read auth token', e);
     }
     return config;
   },
@@ -56,7 +56,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       try {
-        await SecureStore.deleteItemAsync('auth_token');
+        await deleteAuthToken();
       } catch (e) {
         console.warn('Could not clear auth token', e);
       }

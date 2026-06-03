@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { deleteAuthToken, getAuthToken, setAuthToken } from '@/src/services/storage/token';
 import { authApi } from '@/src/services/api/auth.api';
 
 export type UserProfile = {
@@ -46,7 +46,7 @@ export function useAuthStore() {
 
 export async function checkAuth(): Promise<boolean> {
   try {
-    const token = await SecureStore.getItemAsync('auth_token');
+    const token = await getAuthToken();
     if (token) {
       // Try to load real profile from backend
       try {
@@ -66,23 +66,16 @@ export async function checkAuth(): Promise<boolean> {
           isAuthenticated = false;
         }
       } catch (err) {
-        console.warn('Backend profile fetch failed, using mock profile fallback', err);
-        // Fallback: keep authenticated if token exists (offline/local mode bypass)
-        user = {
-          id: 'mock-user-1',
-          email: 'adam.smith@gmail.com',
-          full_name: 'Adam Smith (Offline)',
-          avatar_url: null,
-          phone_verified: true,
-          status: 'active',
-        };
-        isAuthenticated = true;
+        console.warn('Backend profile fetch failed; clearing invalid session', err);
+        await deleteAuthToken();
+        user = null;
+        isAuthenticated = false;
       }
     } else {
       isAuthenticated = false;
     }
   } catch (e) {
-    console.error('SecureStore read error', e);
+    console.error('Auth token read error', e);
     isAuthenticated = false;
   } finally {
     isInitialized = true;
@@ -94,30 +87,26 @@ export async function checkAuth(): Promise<boolean> {
 export async function login(token?: string, userProfile?: UserProfile) {
   try {
     if (token) {
-      await SecureStore.setItemAsync('auth_token', token);
+      await setAuthToken(token);
     } else {
-      // If no token is provided, store a mock token for bypass testing
-      await SecureStore.setItemAsync('auth_token', 'mock-bypass-jwt-token');
+      throw new Error('Login requires a backend access token.');
     }
   } catch (e) {
     console.warn('Could not save auth token to SecureStore', e);
   }
 
-  user = userProfile || {
-    id: 'mock-user-1',
-    email: 'adam.smith@gmail.com',
-    full_name: 'Adam Smith',
-    avatar_url: null,
-    phone_verified: true,
-    status: 'active',
-  };
+  if (!userProfile) {
+    throw new Error('Login requires a backend user profile.');
+  }
+
+  user = userProfile;
   isAuthenticated = true;
   emit();
 }
 
 export async function logout() {
   try {
-    await SecureStore.deleteItemAsync('auth_token');
+    await deleteAuthToken();
     await authApi.logout().catch((err) => {
       console.warn('API logout endpoint call failed', err);
     });

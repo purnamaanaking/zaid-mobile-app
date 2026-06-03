@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Animated, useWindowDimensions, TextInput, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import * as SecureStore from 'expo-secure-store';
 
 import { useAuthStore } from '@/src/store/auth.store';
 import { authApi } from '@/src/services/api/auth.api';
@@ -15,6 +14,7 @@ import { AuthDonePage } from '@/src/features/auth/pages/AuthDonePage';
 import { AuthShell, AuthLayoutMetrics } from '@/src/features/auth/components/AuthShared';
 import { AuthStep } from '@/src/features/auth/types';
 import { initGoogleAuth, signInWithGoogle } from '@/src/services/auth/googleAuth';
+import { setAuthToken } from '@/src/services/storage/token';
 
 export default function HomeScreen() {
   const { isAuthenticated, login, isInitialized } = useAuthStore();
@@ -99,7 +99,7 @@ export default function HomeScreen() {
       const { access_token, onboarding, user: backendUser } = res.data;
 
       // Persist the token so onboarding, calendar, prompts, and tasks use Sanctum auth.
-      await SecureStore.setItemAsync('auth_token', access_token);
+      await setAuthToken(access_token);
 
       if (onboarding.next_step === 'dashboard') {
         await login(access_token, {
