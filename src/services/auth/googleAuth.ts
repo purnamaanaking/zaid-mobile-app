@@ -21,6 +21,7 @@ type GoogleAccounts = {
           use_fedcm_for_prompt?: boolean;
         }) => void;
         prompt: (callback?: (notification: unknown) => void) => void;
+        renderButton: (target: HTMLElement, options: Record<string, unknown>) => void;
       };
     };
   };
@@ -43,6 +44,11 @@ const GOOGLE_WEB_CLIENT_ID =
 let webGoogleScriptPromise: Promise<void> | null = null;
 let pendingWebResolve: ((idToken: string | null) => void) | null = null;
 let pendingWebReject: ((error: Error) => void) | null = null;
+const webCredentialListeners = new Set<(idToken: string) => void>();
+
+function emitWebCredential(idToken: string) {
+  webCredentialListeners.forEach((listener) => listener(idToken));
+}
 
 function loadGoogleIdentityScript(): Promise<void> {
   if (Platform.OS !== 'web') return Promise.resolve();
@@ -78,9 +84,11 @@ export const isGoogleSigninAvailable = (): boolean => {
 
 export const initGoogleAuth = () => {
   if (Platform.OS === 'web') {
-    loadGoogleIdentityScript().catch((error) => {
-      console.error('[GoogleAuth] Failed to initialize Google web sign-in:', error);
-    });
+    loadGoogleIdentityScript()
+      .then(() => initializeGoogleWeb())
+      .catch((error) => {
+        console.error('[GoogleAuth] Failed to initialize Google web sign-in:', error);
+      });
     return;
   }
 
@@ -100,32 +108,60 @@ export const initGoogleAuth = () => {
   }
 };
 
-async function signInWithGoogleWeb(): Promise<string | null> {
-  await loadGoogleIdentityScript();
-
+function initializeGoogleWeb() {
   if (typeof window === 'undefined' || !window.google?.accounts?.id) {
     throw new Error('Google Identity Services is not available.');
   }
+
+  window.google.accounts.id.initialize({
+    auto_select: false,
+    callback: (response: GoogleCredentialResponse) => {
+      const credential = response.credential ?? null;
+      pendingWebResolve?.(credential);
+      pendingWebResolve = null;
+      pendingWebReject = null;
+      if (credential) emitWebCredential(credential);
+    },
+    cancel_on_tap_outside: true,
+    client_id: GOOGLE_WEB_CLIENT_ID,
+    use_fedcm_for_prompt: false,
+  });
+}
+
+export function addGoogleWebCredentialListener(listener: (idToken: string) => void) {
+  webCredentialListeners.add(listener);
+  return () => webCredentialListeners.delete(listener);
+}
+
+export async function renderGoogleWebButton(elementId: string): Promise<boolean> {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return false;
+  await loadGoogleIdentityScript();
+  initializeGoogleWeb();
+
+  const target = document.getElementById(elementId);
+  if (!target || !window?.google?.accounts?.id) return false;
+
+  target.innerHTML = '';
+  window.google.accounts.id.renderButton(target, {
+    shape: 'pill',
+    size: 'large',
+    text: 'signin_with',
+    theme: 'outline',
+    width: Math.min(320, target.clientWidth || 320),
+  } as any);
+  return true;
+}
+
+async function signInWithGoogleWeb(): Promise<string | null> {
+  await loadGoogleIdentityScript();
+  initializeGoogleWeb();
 
   return new Promise((resolve, reject) => {
     pendingWebResolve?.(null);
     pendingWebResolve = resolve;
     pendingWebReject = reject;
 
-    window.google?.accounts?.id?.initialize({
-      auto_select: false,
-      callback: (response: GoogleCredentialResponse) => {
-        const credential = response.credential ?? null;
-        pendingWebResolve = null;
-        pendingWebReject = null;
-        resolve(credential);
-      },
-      cancel_on_tap_outside: true,
-      client_id: GOOGLE_WEB_CLIENT_ID,
-      use_fedcm_for_prompt: false,
-    });
-
-    window.google?.accounts?.id?.prompt((notification: any) => {
+    window?.google?.accounts?.id?.prompt((notification: any) => {
       if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
         const reason = notification?.getNotDisplayedReason?.() || notification?.getSkippedReason?.() || 'unknown';
         pendingWebResolve = null;

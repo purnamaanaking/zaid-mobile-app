@@ -79,49 +79,58 @@ export default function HomeScreen() {
     return <DashboardPage />;
   }
 
+  const completeGoogleLogin = async (idToken: string | null) => {
+    if (!idToken || idToken === 'mock-google-id-token') {
+      Alert.alert('Error', 'Google sign-in did not return a valid token. Please choose a Google account first.');
+      return;
+    }
+
+    try {
+      const res = await authApi.loginWithGoogle(idToken, {
+        device_name: 'zaid-mobile-app',
+        platform: 'expo',
+      });
+
+      if (!res.success || !res.data) {
+        Alert.alert('Error', 'Google authentication failed. Please try again.');
+        return;
+      }
+
+      const { access_token, onboarding, user: backendUser } = res.data;
+
+      // Persist the token so onboarding, calendar, prompts, and tasks use Sanctum auth.
+      await SecureStore.setItemAsync('auth_token', access_token);
+
+      if (onboarding.next_step === 'dashboard') {
+        await login(access_token, {
+          id: backendUser.id,
+          email: backendUser.email,
+          full_name: backendUser.full_name,
+          avatar_url: backendUser.avatar_url,
+          phone_verified: onboarding.phone_verified,
+          status: backendUser.status,
+        });
+        setStep('google');
+      } else if (onboarding.next_step === 'phone_input') {
+        setStep('phone');
+      } else if (onboarding.next_step === 'verify_otp') {
+        setStep('otp');
+      } else {
+        setStep('phone');
+      }
+    } catch (err: any) {
+      console.warn('Google backend authentication failed', err);
+      Alert.alert('Google Sign-in Failed', err.response?.data?.message || err.message || 'Please choose a Google account and try again.');
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     try {
       const idToken = await signInWithGoogle();
-      if (idToken) {
-        if (idToken !== 'mock-google-id-token') {
-          // Call the backend endpoint to authenticate and get user/token details.
-          const res = await authApi.loginWithGoogle(idToken, {
-            device_name: 'zaid-mobile-app',
-            platform: 'expo',
-          });
-          if (res.success && res.data) {
-            const { access_token, onboarding, user: backendUser } = res.data;
-
-            // Persist the token so onboarding, calendar, prompts, and tasks use Sanctum auth.
-            await SecureStore.setItemAsync('auth_token', access_token);
-
-            if (onboarding.next_step === 'dashboard') {
-              await login(access_token, {
-                id: backendUser.id,
-                email: backendUser.email,
-                full_name: backendUser.full_name,
-                avatar_url: backendUser.avatar_url,
-                phone_verified: onboarding.phone_verified,
-                status: backendUser.status,
-              });
-              setStep('google');
-            } else if (onboarding.next_step === 'phone_input') {
-              setStep('phone');
-            } else if (onboarding.next_step === 'verify_otp') {
-              setStep('otp');
-            } else {
-              setStep('phone');
-            }
-            return;
-          }
-        }
-      }
-      // Bypassed Google OAuth step as fallback for developer demo
-      setStep('phone');
+      await completeGoogleLogin(idToken);
     } catch (err: any) {
-      console.warn('Google Sign-in API integration failed, falling back to bypass mode', err);
-      Alert.alert('Info (Offline Demo)', 'Google Login failed or backend API was unreachable. Falling back to local onboarding bypass.');
-      setStep('phone');
+      console.warn('Google Sign-in failed', err);
+      Alert.alert('Google Sign-in Failed', err.response?.data?.message || err.message || 'Please choose a Google account and try again.');
     }
   };
 
@@ -136,14 +145,11 @@ export default function HomeScreen() {
         setVerificationId(res.data.verification_id);
         setStep('otp');
       } else {
-        setVerificationId('mock-verification-id');
-        setStep('otp');
+        Alert.alert('Error', 'Failed to send OTP. Please try again.');
       }
     } catch (err: any) {
-      console.warn('API phone submission failed, falling back to mock OTP', err);
-      setVerificationId('mock-verification-id');
-      setStep('otp');
-      Alert.alert('Info (Offline Demo)', 'Backend API was unreachable. Falling back to local offline simulation.');
+      console.warn('API phone submission failed', err);
+      Alert.alert('Error', err.response?.data?.message || 'Failed to send OTP. Please try again.');
     }
   };
 
@@ -154,8 +160,8 @@ export default function HomeScreen() {
       return;
     }
     try {
-      if (verificationId === 'mock-verification-id') {
-        setStep('connect');
+      if (!verificationId) {
+        Alert.alert('Error', 'Please request an OTP first.');
         return;
       }
       const res = await authApi.verifyPhoneOtp(verificationId, otpCode);
@@ -242,6 +248,7 @@ export default function HomeScreen() {
       {step === 'google' && (
         <AuthPage
           isCompactHeight={isCompactHeight}
+          onGoogleCredential={completeGoogleLogin}
           onGoogleSignIn={handleGoogleSignIn}
         />
       )}
