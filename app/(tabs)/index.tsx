@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Animated, useWindowDimensions, TextInput, Alert } from 'react-native';
+import { useWindowDimensions, TextInput, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 
 import { useAuthStore } from '@/src/store/auth.store';
 import { authApi } from '@/src/services/api/auth.api';
 import { DashboardPage } from '@/src/features/dashboard/pages/DashboardPage';
-import { WelcomePage } from '@/src/features/auth/pages/WelcomePage';
 import { AuthPage } from '@/src/features/auth/pages/AuthPage';
 import { PhoneOtpPage } from '@/src/features/auth/pages/PhoneOtpPage';
 import { OtpVerificationPage } from '@/src/features/auth/pages/OtpVerificationPage';
@@ -18,7 +17,7 @@ import { setAuthToken } from '@/src/services/storage/token';
 
 export default function HomeScreen() {
   const { isAuthenticated, login, isInitialized } = useAuthStore();
-  const [step, setStep] = useState<AuthStep>('welcome');
+  const [step, setStep] = useState<AuthStep>('google');
   const [phone, setPhone] = useState('');
   const [verificationId, setVerificationId] = useState('');
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
@@ -40,43 +39,16 @@ export default function HomeScreen() {
     quoteHeight,
   };
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
   // Initialize Google Auth client configuration
   useEffect(() => {
     initGoogleAuth();
   }, []);
 
-  // Run welcome page splash fade animation on launch
-  useEffect(() => {
-    if (step === 'welcome') {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 900,
-        useNativeDriver: true,
-      }).start(() => {
-        setTimeout(() => {
-          Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 700,
-            useNativeDriver: true,
-          }).start(() => {
-            if (isAuthenticated) {
-              // Dashboard page will be displayed automatically
-            } else {
-              setStep('google');
-            }
-          });
-        }, 1600);
-      });
-    }
-  }, [step, fadeAnim, isAuthenticated]);
-
   if (!isInitialized) {
     return null; // Prevent UI flicker
   }
 
-  if (isAuthenticated && step !== 'welcome') {
+  if (isAuthenticated) {
     return <DashboardPage />;
   }
 
@@ -245,19 +217,6 @@ export default function HomeScreen() {
   const maskedPhone = phone.length > 4 
     ? phone.slice(0, 4) + ' •••• •••• ' + phone.slice(-2)
     : phone;
-
-  const logoSize = isNarrow ? 120 : 156;
-  const wordmarkSize = isNarrow ? 22 : 28;
-
-  if (step === 'welcome') {
-    return (
-      <WelcomePage
-        fade={fadeAnim}
-        logoSize={logoSize}
-        wordmarkSize={wordmarkSize}
-      />
-    );
-  }
 
   return (
     <AuthShell metrics={metrics}>
