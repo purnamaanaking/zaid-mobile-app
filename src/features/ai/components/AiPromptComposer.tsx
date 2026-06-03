@@ -10,6 +10,8 @@ type AiPromptComposerProps = {
   prompt: string;
   attachedFile: { name: string; type: string } | null;
   onRemoveAttachedFile: () => void;
+  isKeyboardVisible?: boolean;
+  bottomInset?: number;
 };
 
 export function AiPromptComposer({
@@ -21,9 +23,13 @@ export function AiPromptComposer({
   prompt,
   attachedFile,
   onRemoveAttachedFile,
+  isKeyboardVisible = false,
+  bottomInset = 0,
 }: AiPromptComposerProps) {
+  const currentMarginBottom = isKeyboardVisible ? 12 : (bottomInset > 0 ? bottomInset + 12 : 24);
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { marginBottom: currentMarginBottom }]}>
       <View style={styles.titleRow}>
         <View style={styles.logoMark}>
           <MaterialIcons name="auto-awesome" color="#FFFFFF" size={16} />
@@ -45,8 +51,8 @@ export function AiPromptComposer({
       {attachedFile && (
         <View style={styles.attachmentBadge}>
           <MaterialIcons
-            name={attachedFile.type === 'pdf' ? 'picture-as-pdf' : 'insert-photo'}
-            color={attachedFile.type === 'pdf' ? '#EF4444' : '#3B82F6'}
+            name={attachedFile.type.includes('pdf') ? 'picture-as-pdf' : attachedFile.type.startsWith('image/') ? 'insert-photo' : 'insert-drive-file'}
+            color={attachedFile.type.includes('pdf') ? '#EF4444' : attachedFile.type.startsWith('image/') ? '#3B82F6' : '#6B7280'}
             size={18}
           />
           <Text numberOfLines={1} style={styles.attachmentText}>
@@ -107,11 +113,9 @@ const styles = StyleSheet.create({
     borderColor: '#665CFF',
     borderRadius: 14,
     borderWidth: 1.5,
-    bottom: 34,
-    left: 24,
     padding: 18,
-    position: 'absolute',
-    right: 24,
+    marginHorizontal: 24,
+    marginBottom: 24,
     shadowColor: '#665CFF',
     shadowOffset: { height: 8, width: 0 },
     shadowOpacity: 0.1,

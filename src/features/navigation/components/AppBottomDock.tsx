@@ -1,6 +1,7 @@
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { Href, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View, Keyboard, Platform } from 'react-native';
 
 export type AppTabKey = 'home' | 'schedule' | 'notification' | 'profile';
 
@@ -22,6 +23,24 @@ const TAB_ITEMS: {
 
 export function AppBottomDock({ activeTab }: AppBottomDockProps) {
   const router = useRouter();
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideListener = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
+
+  if (isKeyboardVisible) {
+    return null;
+  }
 
   return (
     <View pointerEvents="box-none" style={styles.bottomDockWrap}>

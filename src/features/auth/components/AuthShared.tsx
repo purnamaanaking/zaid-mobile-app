@@ -1,5 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Image, ScrollView, Text, View, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, ScrollView, Text, View, Platform, KeyboardAvoidingView, Keyboard } from 'react-native';
 
 const ZAID_LOGO = require('@/src/components/image/logo-zaid.png');
 
@@ -17,53 +18,80 @@ type AuthShellProps = {
 };
 
 export function AuthShell({ children, metrics }: AuthShellProps) {
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideListener = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F8FF' }}>
-      <View
-        className="overflow-hidden bg-[#F8F8FF] pt-2"
-        style={{ height: metrics.quoteHeight }}>
-        <BrandHeader />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1, backgroundColor: '#F8F8FF' }}>
+      <View style={{ flex: 1 }}>
+        {!isKeyboardVisible && (
+          <View
+            className="overflow-hidden bg-[#F8F8FF] pt-2"
+            style={{ height: metrics.quoteHeight }}>
+            <BrandHeader />
+            <View
+              className="items-center justify-center"
+              style={{ paddingTop: metrics.isCompactHeight ? 24 : 48 }}>
+              <Text
+                className="text-center text-[#32384D]"
+                style={[
+                  {
+                    fontSize: metrics.quoteFontSize,
+                    lineHeight: metrics.quoteFontSize * 1.55,
+                  },
+                ]}>
+                The time has{'\n'}passed so quickly.
+              </Text>
+              <Text
+                className="mt-[12px] text-[#32384D]"
+                style={{
+                  fontSize: metrics.isNarrow ? 16 : 18,
+                }}>
+                -Socrates
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View
-          className="items-center justify-center"
-          style={{ paddingTop: metrics.isCompactHeight ? 24 : 48 }}>
-          <Text
-            className="text-center text-[#32384D]"
-            style={[
-              {
-                fontSize: metrics.quoteFontSize,
-                lineHeight: metrics.quoteFontSize * 1.55,
-              },
-            ]}>
-            The time has{'\n'}passed so quickly.
-          </Text>
-          <Text
-            className="mt-[12px] text-[#32384D]"
-            style={{
-              fontSize: metrics.isNarrow ? 16 : 18,
-            }}>
-            -Socrates
-          </Text>
+          className="flex-1 rounded-t-[34px] bg-card pt-5"
+          style={{
+            marginTop: isKeyboardVisible ? 0 : (metrics.isCompactHeight ? 8 : 16),
+            paddingBottom: isKeyboardVisible ? 12 : (metrics.isCompactHeight ? 24 : 42),
+            paddingHorizontal: metrics.horizontalPadding,
+            borderTopLeftRadius: isKeyboardVisible ? 0 : 34,
+            borderTopRightRadius: isKeyboardVisible ? 0 : 34,
+          }}>
+          {!isKeyboardVisible && (
+            <View className="mb-7 h-2 w-[88px] self-center rounded-full bg-[#E7E8EC]" />
+          )}
+          <ScrollView
+            bounces={false}
+            contentContainerClassName="flex-grow"
+            contentContainerStyle={{ 
+              minHeight: isKeyboardVisible ? 150 : (metrics.isCompactHeight ? 280 : 330) 
+            }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            {children}
+          </ScrollView>
         </View>
       </View>
-
-      <View
-        className="flex-1 rounded-t-[34px] bg-card pt-5"
-        style={{
-          marginTop: metrics.isCompactHeight ? 8 : 16,
-          paddingBottom: metrics.isCompactHeight ? 24 : 42,
-          paddingHorizontal: metrics.horizontalPadding,
-        }}>
-        <View className="mb-7 h-2 w-[88px] self-center rounded-full bg-[#E7E8EC]" />
-        <ScrollView
-          bounces={false}
-          contentContainerClassName="flex-grow"
-          contentContainerStyle={{ minHeight: metrics.isCompactHeight ? 280 : 330 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          {children}
-        </ScrollView>
-      </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

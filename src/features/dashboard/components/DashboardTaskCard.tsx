@@ -20,9 +20,9 @@ export function DashboardTaskCard({ schedule }: DashboardTaskCardProps) {
         <Text numberOfLines={2} style={styles.taskDescription}>
           {schedule.description}
         </Text>
-        <Text numberOfLines={1} style={styles.promptText}>
+        {/* <Text numberOfLines={1} style={styles.promptText}>
           From prompt: {schedule.sourcePrompt}
-        </Text>
+        </Text> */}
         <View style={styles.metaRow}>
           <View style={styles.metaChip}>
             <MaterialIcons name="alarm" color="#FFFFFF" size={14} />
@@ -63,7 +63,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginTop: 12,
+    marginTop: 'auto',
+    paddingTop: 12,
   },
   metaText: {
     color: '#FFFFFF',
@@ -91,9 +92,9 @@ const styles = StyleSheet.create({
   taskDescription: {
     color: '#99A5BB',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     lineHeight: 19,
-    marginTop: 18,
+    marginTop: 10,
   },
   taskIcon: {
     alignItems: 'center',
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
   },
   taskTitle: {
     color: '#121827',
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '600',
   },
 });

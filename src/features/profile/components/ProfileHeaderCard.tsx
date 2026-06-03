@@ -1,15 +1,19 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useAuthStore } from '@/src/store/auth.store';
+
 export function ProfileHeaderCard() {
+  const { user } = useAuthStore();
+
   return (
     <View style={styles.card}>
       <View style={styles.avatar}>
         <MaterialIcons name="person" color="#FFFFFF" size={42} />
       </View>
       <View>
-        <Text style={styles.name}>Adam Smith</Text>
-        <Text style={styles.handle}>adam.smith@gmail.com</Text>
+        <Text style={styles.name}>{user?.full_name || 'User'}</Text>
+        <Text style={styles.handle}>{user?.email || 'user@example.com'}</Text>
       </View>
     </View>
   );

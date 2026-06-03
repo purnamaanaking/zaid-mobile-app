@@ -1,5 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from 'react-native';
 
 import { RecurringOption } from '@/src/features/ai/types';
 import { PromptSchedule } from '@/src/types/schedule.types';
@@ -26,6 +27,23 @@ export function SchedulePreviewModal({
   schedule,
   visible,
 }: SchedulePreviewModalProps) {
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideListener = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, [visible]);
+
   if (!schedule) {
     return null;
   }
@@ -36,8 +54,12 @@ export function SchedulePreviewModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <Pressable accessibilityLabel="Close schedule preview" onPress={onClose} style={styles.backdrop}>
-          <Pressable style={styles.card}>
+        <Pressable 
+          accessibilityLabel="Close schedule preview" 
+          onPress={onClose} 
+          style={[styles.backdrop, isKeyboardVisible && { justifyContent: 'flex-end' }]}
+        >
+          <Pressable style={[styles.card, isKeyboardVisible && { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}>
             {/* Header with Sparkle Icon and Close */}
             <View style={styles.header}>
               <View style={styles.headerTitleContainer}>

@@ -7,12 +7,14 @@ import {
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { Text, TextInput, TextInputProps, TextProps } from 'react-native';
 import 'react-native-reanimated';
 import '@/global.css';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Fonts } from '@/src/constants/typography';
+import { checkAuth } from '@/src/store/auth.store';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -39,6 +41,10 @@ export default function RootLayout() {
     Poppins_500Medium,
     Poppins_600SemiBold,
   });
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   if (!fontsLoaded) {
     return null;

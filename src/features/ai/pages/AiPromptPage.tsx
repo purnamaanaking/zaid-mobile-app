@@ -2,26 +2,34 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useState, useRef, useEffect } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Image,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableWithoutFeedback,
   View,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as DocumentPicker from 'expo-document-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { AiPromptComposer } from '@/src/features/ai/components/AiPromptComposer';
 import { SchedulePreviewModal } from '@/src/features/ai/components/SchedulePreviewModal';
 import { addPromptSchedule } from '@/src/features/schedule/store/promptScheduleStore';
 import { PromptSchedule } from '@/src/types/schedule.types';
+import { extractApi } from '@/src/services/api/extract.api';
 
 const ZAID_LOGO = require('@/src/components/image/logo-zaid.png');
 
-// ─── Smart NLP Parser ────────────────────────────────────────────────────────
+// ─── Smart NLP Parser (Offline Regex Parser) ───────────────────────────────────
 
 function dateKey(date: Date) {
   const y = date.getFullYear();
@@ -144,7 +152,7 @@ function buildScheduleFromPrompt(prompt: string): PromptSchedule {
     time,
     endTime: (() => {
       const [h, m] = time.split(':').map(Number);
-      return `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     })(),
     location: 'ZAID AI',
     description: prompt,
@@ -187,7 +195,6 @@ function VoiceRecordingModal({
     }
     setPhase('recording');
 
-    // Animate waveform bars
     const animateBars = () => {
       const anims = barAnims.map((bar) =>
         Animated.sequence([
@@ -209,7 +216,6 @@ function VoiceRecordingModal({
     };
     animateBars();
 
-    // After 3s switch to transcribing, then emit transcript
     timerRef.current = setTimeout(() => {
       setPhase('transcribing');
       timerRef.current = setTimeout(() => {
@@ -222,7 +228,6 @@ function VoiceRecordingModal({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-    // barAnims and onDone are stable refs/callbacks — excluding them is intentional
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
@@ -277,109 +282,151 @@ function VoiceRecordingModal({
   );
 }
 
-// ─── File Attachment Drawer ───────────────────────────────────────────────────
-
-const MOCK_FILES = [
-  { name: 'jadwal_sprint_mei.pdf', type: 'pdf', size: '142 KB' },
-  { name: 'rencana_kegiatan.xlsx', type: 'xlsx', size: '58 KB' },
-  { name: 'timeline_project.png', type: 'image', size: '320 KB' },
-  { name: 'notulen_rapat.docx', type: 'docx', size: '87 KB' },
-  { name: 'proposal_final.pdf', type: 'pdf', size: '2.1 MB' },
-];
-
-function fileIcon(type: string): keyof typeof MaterialIcons.glyphMap {
-  switch (type) {
-    case 'pdf': return 'picture-as-pdf';
-    case 'image': return 'insert-photo';
-    case 'xlsx': return 'table-chart';
-    default: return 'insert-drive-file';
-  }
-}
-
-function fileIconColor(type: string): string {
-  switch (type) {
-    case 'pdf': return '#EF4444';
-    case 'image': return '#3B82F6';
-    case 'xlsx': return '#10B981';
-    default: return '#6B7280';
-  }
-}
-
-function FileDrawer({
-  visible,
-  onSelect,
-  onCancel,
-}: {
-  visible: boolean;
-  onSelect: (file: { name: string; type: string }) => void;
-  onCancel: () => void;
-}) {
-  return (
-    <Modal animationType="slide" transparent visible={visible}>
-      <TouchableWithoutFeedback onPress={onCancel}>
-        <View style={fileStyles.backdrop}>
-          <TouchableWithoutFeedback>
-            <View style={fileStyles.sheet}>
-              <View style={fileStyles.handle} />
-              <Text style={fileStyles.title}>Attach File</Text>
-              <Text style={fileStyles.subtitle}>
-                Select a file to attach to your schedule prompt
-              </Text>
-              <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 12 }}>
-                {MOCK_FILES.map((file) => (
-                  <Pressable
-                    key={file.name}
-                    style={fileStyles.fileRow}
-                    onPress={() => onSelect({ name: file.name, type: file.type })}>
-                    <View
-                      style={[
-                        fileStyles.fileIcon,
-                        { backgroundColor: fileIconColor(file.type) + '22' },
-                      ]}>
-                      <MaterialIcons
-                        name={fileIcon(file.type)}
-                        color={fileIconColor(file.type)}
-                        size={22}
-                      />
-                    </View>
-                    <View style={fileStyles.fileInfo}>
-                      <Text style={fileStyles.fileName} numberOfLines={1}>
-                        {file.name}
-                      </Text>
-                      <Text style={fileStyles.fileSize}>{file.size}</Text>
-                    </View>
-                    <MaterialIcons name="chevron-right" color="#D1D5DB" size={22} />
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function AiPromptPage() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [preview, setPreview] = useState<PromptSchedule | null>(null);
   const [statusText, setStatusText] = useState('Type, speak, or attach a file to get started');
   const [voiceVisible, setVoiceVisible] = useState(false);
-  const [fileDrawerVisible, setFileDrawerVisible] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ name: string; type: string } | null>(null);
+  const [attachments, setAttachments] = useState<any[] | null>(null);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
-  function processPrompt(text: string) {
+  // ── Animasi 3 titik loading ──────────────────────────────────
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isProcessing) return;
+    const pulse = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 320, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 320, useNativeDriver: true }),
+          Animated.delay(640 - delay),
+        ])
+      );
+    const a1 = pulse(dot1, 0);
+    const a2 = pulse(dot2, 200);
+    const a3 = pulse(dot3, 400);
+    a1.start(); a2.start(); a3.start();
+    return () => { a1.stop(); a2.stop(); a3.stop(); dot1.setValue(0); dot2.setValue(0); dot3.setValue(0); };
+  }, [isProcessing, dot1, dot2, dot3]);
+
+  // ── Animasi success checkmark ──────────────────────────────
+  const successScale = useRef(new Animated.Value(0)).current;
+  const successOpacity = useRef(new Animated.Value(0)).current;
+
+  function triggerSuccess(callback: () => void) {
+    setShowSuccess(true);
+    successScale.setValue(0);
+    successOpacity.setValue(0);
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(successScale, { toValue: 1, useNativeDriver: true, damping: 10, stiffness: 200 }),
+        Animated.timing(successOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]),
+      Animated.delay(900),
+      Animated.timing(successOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => {
+      setShowSuccess(false);
+      callback();
+    });
+  }
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideListener = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
+
+  async function processPrompt(text: string) {
     if (!text.trim()) return;
     setIsProcessing(true);
     setStatusText('AI is analyzing your schedule input...');
-    setTimeout(() => {
-      setPreview(buildScheduleFromPrompt(text));
+
+    try {
+      const res = await extractApi.processPrompt(text, attachments);
+      if (res.success && res.data) {
+        const { parse_status, result, confirmation } = res.data;
+        
+        if (parse_status === 'success' && result) {
+          const task = result.task || result;
+          const now = new Date();
+          setStatusText('Schedule detected by AI. Please verify before saving.');
+          triggerSuccess(() => setPreview({
+            id: task.id || `ai-${now.getTime()}`,
+            userId: 'user-1',
+            title: task.title || parseTitle(text),
+            date: task.scheduled_date || dateKey(now),
+            time: task.scheduled_time || '09:00',
+            endTime: (() => {
+              const [h, m] = (task.scheduled_time || '09:00').split(':').map(Number);
+              return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            })(),
+            location: 'ZAID AI',
+            description: task.description || '',
+            reminderMinutes: 30,
+            status: 'active',
+            sourcePrompt: text,
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+          }));
+        } else if (parse_status === 'requires_confirmation' && confirmation) {
+          const entities = confirmation.entities || {};
+          const now = new Date();
+          setPreview({
+            id: `ai-${now.getTime()}`,
+            userId: 'user-1',
+            title: entities.title || parseTitle(text),
+            date: entities.scheduled_date || dateKey(now),
+            time: entities.scheduled_time || '09:00',
+            endTime: (() => {
+              const [h, m] = (entities.scheduled_time || '09:00').split(':').map(Number);
+              return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            })(),
+            location: 'ZAID AI',
+            description: entities.description || '',
+            reminderMinutes: 30,
+            status: 'active',
+            sourcePrompt: text,
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+          });
+          setStatusText(`AI asks: "${confirmation.question || 'Is this correct?'}"`);
+        } else {
+          const localParsed = buildScheduleFromPrompt(text);
+          setPreview(localParsed);
+          setStatusText('Schedule parsed locally. Please verify before saving.');
+        }
+      } else {
+        const localParsed = buildScheduleFromPrompt(text);
+        setPreview(localParsed);
+        setStatusText('Schedule parsed locally. Please verify before saving.');
+      }
+    } catch (err: any) {
+      const apiErrMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
+      console.warn('Backend LLM parsing failed, using local regex parser fallback:', apiErrMsg);
+      const localParsed = buildScheduleFromPrompt(text);
+      setPreview(localParsed);
+      setStatusText(`Parsed locally. API Error: ${apiErrMsg}`);
+    } finally {
       setIsProcessing(false);
-      setStatusText('Schedule detected. Please verify before saving.');
-    }, 800);
+    }
   }
 
   function handleVoiceDone(transcript: string) {
@@ -389,14 +436,73 @@ export function AiPromptPage() {
     setTimeout(() => processPrompt(transcript), 400);
   }
 
-  function handleFileSelect(file: { name: string; type: string }) {
-    setFileDrawerVisible(false);
-    setAttachedFile(file);
-    const filePrompt = prompt
-      ? `${prompt} [file: ${file.name}]`
-      : `Ekstrak jadwal dari file: ${file.name}`;
-    setPrompt(filePrompt);
-    setStatusText(`File attached: ${file.name}`);
+  async function handleFilePick() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setStatusText(`Uploading file: ${asset.name}...`);
+        setIsProcessing(true);
+
+        try {
+          const mime = asset.mimeType || '';
+          let type: 'image' | 'audio' | 'document' = 'document';
+          if (mime.startsWith('image/')) type = 'image';
+          else if (mime.startsWith('audio/')) type = 'audio';
+
+          const uploadRes = await extractApi.uploadFile(
+            asset.uri,
+            asset.name,
+            mime || 'application/octet-stream',
+            type
+          );
+
+          if (uploadRes.success && uploadRes.data) {
+            setAttachedFile({ name: asset.name, type: asset.mimeType || 'document' });
+            
+            const newAttachment = {
+              type: type === 'image' ? 'image' : 'audio_transcription',
+              url: uploadRes.data.url,
+              text: `File: ${asset.name}`,
+            };
+            setAttachments([newAttachment]);
+            
+            const filePrompt = prompt
+              ? `${prompt} [file: ${asset.name}]`
+              : `Ekstrak jadwal dari file: ${asset.name}`;
+            setPrompt(filePrompt);
+            setStatusText(`File uploaded successfully: ${asset.name}`);
+          } else {
+            Alert.alert('Error', 'Failed to upload file to backend API.');
+            setStatusText('Failed to upload file.');
+          }
+        } catch (uploadErr: any) {
+          const errMsg = uploadErr.response?.data?.error?.message || uploadErr.message;
+          console.warn('File upload failed, falling back to local simulation:', errMsg);
+          
+          setAttachedFile({ name: asset.name, type: asset.mimeType || 'document' });
+          const mockFileUrl = `https://zaid-assist.my.id/storage/mocks/${asset.name}`;
+          setAttachments([{
+            type: asset.mimeType?.startsWith('image/') ? 'image' : 'audio_transcription',
+            url: mockFileUrl,
+            text: `Local mock file: ${asset.name}`
+          }]);
+          const filePrompt = prompt
+            ? `${prompt} [file: ${asset.name}]`
+            : `Ekstrak jadwal dari file: ${asset.name}`;
+          setPrompt(filePrompt);
+          setStatusText(`File attached (local fallback). API Error: ${errMsg}`);
+        }
+      }
+    } catch (err) {
+      console.warn('Error picking document', err);
+    } finally {
+      setIsProcessing(false);
+    }
   }
 
   function handleSave() {
@@ -405,88 +511,219 @@ export function AiPromptPage() {
     setPreview(null);
     setPrompt('');
     setAttachedFile(null);
+    setAttachments(null);
     setStatusText('Saved to Dashboard and Calendar ✓');
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Brand */}
-      <View style={styles.brandRow}>
-        <Image
-          accessibilityIgnoresInvertColors
-          resizeMode="contain"
-          source={ZAID_LOGO}
-          style={styles.logo}
+    <View style={{ flex: 1, paddingTop: insets.top }}>
+      <LinearGradient
+        colors={['#E6E3FF', '#F4F5FA', '#FBFAF8']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Brand */}
+          <View style={styles.brandRow}>
+            <Pressable
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+              onPress={() => router.back()}
+              style={({ pressed }) => [
+                styles.backButton,
+                pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
+              ]}>
+              <MaterialIcons name="chevron-left" color="#1F2937" size={28} />
+            </Pressable>
+            <Image
+              accessibilityIgnoresInvertColors
+              resizeMode="contain"
+              source={ZAID_LOGO}
+              style={styles.logo}
+            />
+            <Text style={styles.brand}>ZAID.</Text>
+          </View>
+
+          {/* Quote section */}
+          {!isKeyboardVisible && (
+            <View style={styles.quoteWrap}>
+              <Text style={styles.quote}>{"The time has\npassed so quickly."}</Text>
+              <Text style={styles.author}>— Socrates</Text>
+            </View>
+          )}
+
+          {/* Status chip */}
+          <View style={[styles.statusRow, isKeyboardVisible && { marginTop: 16 }]}>
+            {isProcessing ? (
+              // Animasi 3 titik bergerak naik turun
+              <View style={styles.dotsRow}>
+                {[dot1, dot2, dot3].map((dot, i) => (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.loadingDot,
+                      {
+                        transform: [{
+                          translateY: dot.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, -6],
+                          }),
+                        }],
+                        opacity: dot.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.35, 1],
+                        }),
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.statusDot} />
+            )}
+            <Text style={styles.statusText}>{statusText}</Text>
+          </View>
+
+          {/* Animasi Success Overlay */}
+          {showSuccess && (
+            <Animated.View
+              style={[
+                styles.successOverlay,
+                { opacity: successOpacity, transform: [{ scale: successScale }] },
+              ]}>
+              <View style={styles.successCircle}>
+                <MaterialIcons name="check" color="#FFFFFF" size={40} />
+              </View>
+              <Text style={styles.successLabel}>Schedule Extracted!</Text>
+            </Animated.View>
+          )}
+        </ScrollView>
+
+        {/* Prompt Composer — pinned at bottom */}
+        <AiPromptComposer
+          isProcessing={isProcessing}
+          onAttachFile={handleFilePick}
+          onChangePrompt={setPrompt}
+          onRecordVoice={() => setVoiceVisible(true)}
+          onSubmit={() => processPrompt(prompt)}
+          prompt={prompt}
+          attachedFile={attachedFile}
+          onRemoveAttachedFile={() => {
+            setAttachedFile(null);
+            setAttachments(null);
+            setStatusText('Attachment removed');
+          }}
+          isKeyboardVisible={isKeyboardVisible}
+          bottomInset={insets.bottom}
         />
-        <Text style={styles.brand}>ZAID.</Text>
-      </View>
 
-      {/* Quote section */}
-      <View style={styles.quoteWrap}>
-        <Text style={styles.quote}>{"The time has\npassed so quickly."}</Text>
-        <Text style={styles.author}>— Socrates</Text>
-      </View>
+        {/* Modals */}
+        <VoiceRecordingModal
+          visible={voiceVisible}
+          onDone={handleVoiceDone}
+          onCancel={() => setVoiceVisible(false)}
+        />
 
-      {/* Status chip */}
-      <View style={styles.statusRow}>
-        {isProcessing ? (
-          <ActivityIndicator color="#665CFF" size="small" />
-        ) : (
-          <View style={styles.statusDot} />
-        )}
-        <Text style={styles.statusText}>{statusText}</Text>
-      </View>
-
-      {/* Prompt Composer — pinned at bottom */}
-      <AiPromptComposer
-        isProcessing={isProcessing}
-        onAttachFile={() => setFileDrawerVisible(true)}
-        onChangePrompt={setPrompt}
-        onRecordVoice={() => setVoiceVisible(true)}
-        onSubmit={() => processPrompt(prompt)}
-        prompt={prompt}
-        attachedFile={attachedFile}
-        onRemoveAttachedFile={() => {
-          setAttachedFile(null);
-          setStatusText('Attachment removed');
-        }}
-      />
-
-      {/* Modals */}
-      <VoiceRecordingModal
-        visible={voiceVisible}
-        onDone={handleVoiceDone}
-        onCancel={() => setVoiceVisible(false)}
-      />
-
-      <FileDrawer
-        visible={fileDrawerVisible}
-        onSelect={handleFileSelect}
-        onCancel={() => setFileDrawerVisible(false)}
-      />
-
-      <SchedulePreviewModal
-        onChangeSchedule={(patch) =>
-          setPreview((current) => (current ? { ...current, ...patch } : current))
-        }
-        onClose={() => setPreview(null)}
-        onSave={handleSave}
-        schedule={preview}
-        visible={Boolean(preview)}
-      />
-    </SafeAreaView>
+        <SchedulePreviewModal
+          onChangeSchedule={(patch) =>
+            setPreview((current) => (current ? { ...current, ...patch } : current))
+          }
+          onClose={() => setPreview(null)}
+          onSave={handleSave}
+          schedule={preview}
+          visible={Boolean(preview)}
+        />
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  dotsRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+    height: 20,
+    justifyContent: 'center',
+  },
+  loadingDot: {
+    backgroundColor: '#665CFF',
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  successCircle: {
+    alignItems: 'center',
+    backgroundColor: '#10B981',
+    borderRadius: 50,
+    height: 80,
+    justifyContent: 'center',
+    marginBottom: 14,
+    shadowColor: '#10B981',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+    width: 80,
+  },
+  successLabel: {
+    color: '#111827',
+    fontSize: 17,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  successOverlay: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.97)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    elevation: 16,
+    marginTop: 24,
+    paddingHorizontal: 40,
+    paddingVertical: 28,
+    shadowColor: '#000',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+  },
   author: {
+
     color: '#6B7280',
     fontSize: 18,
     fontWeight: '500',
     marginTop: 18,
     textAlign: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
   brand: {
     color: '#111111',
@@ -499,6 +736,8 @@ const styles = StyleSheet.create({
     gap: 7,
     justifyContent: 'center',
     marginTop: 24,
+    position: 'relative',
+    width: '100%',
   },
   logo: {
     height: 26,
@@ -617,67 +856,4 @@ const voiceStyles = StyleSheet.create({
   },
 });
 
-const fileStyles = StyleSheet.create({
-  backdrop: {
-    backgroundColor: 'rgba(17,24,39,0.5)',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  fileIcon: {
-    alignItems: 'center',
-    borderRadius: 12,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  fileInfo: {
-    flex: 1,
-    paddingHorizontal: 12,
-  },
-  fileName: {
-    color: '#1F2937',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  fileRow: {
-    alignItems: 'center',
-    borderRadius: 14,
-    flexDirection: 'row',
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: '#F9FAFB',
-  },
-  fileSize: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  handle: {
-    alignSelf: 'center',
-    backgroundColor: '#E5E7EB',
-    borderRadius: 999,
-    height: 4,
-    marginBottom: 18,
-    width: 40,
-  },
-  sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    maxHeight: '60%',
-    padding: 22,
-    paddingBottom: 40,
-  },
-  subtitle: {
-    color: '#9CA3AF',
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  title: {
-    color: '#111827',
-    fontSize: 19,
-    fontWeight: '700',
-  },
-});
+

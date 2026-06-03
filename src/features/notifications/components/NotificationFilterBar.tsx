@@ -2,10 +2,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { NotificationFilter } from '@/src/features/notifications/types';
 
-const FILTERS: { label: string; value: NotificationFilter }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Today', value: 'today' },
-  { label: 'Upcoming', value: 'upcoming' },
+const FILTERS: { label: string; value: NotificationFilter; activeColor: string; dotColor: string }[] = [
+  { label: 'All',      value: 'all',      activeColor: '#665CFF', dotColor: '#9992FF' },
+  { label: 'Today',    value: 'today',    activeColor: '#EF4444', dotColor: '#FCA5A5' },
+  { label: 'Upcoming', value: 'upcoming', activeColor: '#D97706', dotColor: '#FCD34D' },
 ];
 
 export function NotificationFilterBar({
@@ -26,7 +26,11 @@ export function NotificationFilterBar({
             accessibilityRole="button"
             key={filter.value}
             onPress={() => onChangeFilter(filter.value)}
-            style={[styles.pill, active ? styles.pillActive : null]}>
+            style={[
+              styles.pill,
+              active ? { backgroundColor: filter.activeColor } : null,
+            ]}>
+            {active && <View style={[styles.dot, { backgroundColor: filter.dotColor }]} />}
             <Text style={[styles.text, active ? styles.textActive : null]}>{filter.label}</Text>
           </Pressable>
         );
@@ -36,22 +40,24 @@ export function NotificationFilterBar({
 }
 
 const styles = StyleSheet.create({
+  dot: {
+    borderRadius: 5,
+    height: 7,
+    width: 7,
+  },
   pill: {
     alignItems: 'center',
     backgroundColor: '#EDEFF5',
     borderRadius: 12,
     flex: 1,
-    height: 38,
+    flexDirection: 'row',
+    gap: 7,
+    height: 40,
     justifyContent: 'center',
-  },
-  pillActive: {
-    backgroundColor: '#665CFF',
   },
   row: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 22,
-    marginTop: 18,
   },
   text: {
     color: '#8E99AE',

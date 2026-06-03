@@ -27,7 +27,7 @@ export function GoogleConnectPage({ isCompactHeight, onAllowAccess }: GoogleConn
       </View>
       <Button
         accessibilityLabel="Connect Google Calendar and Tasks"
-        className="mt-auto self-stretch"
+        className="mt-10 self-stretch"
         onPress={onAllowAccess}>
         Allow Access
       </Button>

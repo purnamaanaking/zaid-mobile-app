@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState, useEffect } from 'react';
+import { ScrollView, StyleSheet, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CalendarBottomDock } from '@/src/features/calendar/components/CalendarBottomDock';
@@ -8,10 +8,11 @@ import { CalendarGrid } from '@/src/features/calendar/components/CalendarGrid';
 import { CalendarHeader } from '@/src/features/calendar/components/CalendarHeader';
 import { CalendarScheduleCard } from '@/src/features/calendar/components/CalendarScheduleCard';
 import { CalendarFilter } from '@/src/features/calendar/types';
-import { buildCalendarDays, dateKey, shiftMonth } from '@/src/features/calendar/utils/date';
+import { buildCalendarDays, dateKey, monthTitle, yearTitle, shiftMonth } from '@/src/features/calendar/utils/date';
 import {
   deletePromptSchedule,
   usePromptSchedules,
+  fetchPromptSchedules,
 } from '@/src/features/schedule/store/promptScheduleStore';
 
 export function CalendarPage() {
@@ -21,9 +22,16 @@ export function CalendarPage() {
   const [endDate, setEndDate] = useState<string | null>(dateKey(today));
   const [activeFilter, setActiveFilter] = useState<CalendarFilter>('recent');
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [calendarSectionHeight, setCalendarSectionHeight] = useState(0);
+  const [isSticky, setIsSticky] = useState(false);
   const schedules = usePromptSchedules();
 
+  useEffect(() => {
+    fetchPromptSchedules();
+  }, []);
+
   const calendarDays = useMemo(() => buildCalendarDays(monthDate), [monthDate]);
+
   const markedDates = useMemo(() => {
     const dates = new Set<string>();
     schedules.forEach((schedule) => {
@@ -95,54 +103,83 @@ export function CalendarPage() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        bounces={false}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}>
-        <CalendarHeader
-          monthDate={monthDate}
-          onNextMonth={() => setMonthDate((current) => shiftMonth(current, 1))}
-          onPreviousMonth={() => setMonthDate((current) => shiftMonth(current, -1))}
-        />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}>
+        {/*
+          stickyHeaderIndices={[1]} → child index ke-1 (StickyBar) akan menempel
+          di atas ketika discroll melewatinya ke atas.
 
-        <CalendarGrid
-          days={calendarDays}
-          markedDates={markedDates}
-          onSelectDate={handleSelectDate}
-          startDate={startDate}
-          endDate={endDate}
-        />
+          Layout ScrollView children:
+            [0] Kalender penuh (header + grid) — scroll & hilang normal
+            [1] Sticky bar: label bulan kecil + filter bar
+            [2] Daftar schedule card
+        */}
+        <ScrollView
+          bounces={false}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets={true}
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            const y = e.nativeEvent.contentOffset.y;
+            setIsSticky(y >= calendarSectionHeight - 2);
+          }}
+          stickyHeaderIndices={[1]}>
 
-        {startDate ? (
-          <Text style={styles.sectionTitle}>
-            {startDate}
-            {endDate ? ` to ${endDate}` : ''}
-          </Text>
-        ) : null}
+          <View
+            style={styles.calendarSection}
+            onLayout={(e) => setCalendarSectionHeight(e.nativeEvent.layout.height)}>
+            <CalendarHeader
+              monthDate={monthDate}
+              onNextMonth={() => setMonthDate((current) => shiftMonth(current, 1))}
+              onPreviousMonth={() => setMonthDate((current) => shiftMonth(current, -1))}
+            />
+            <CalendarGrid
+              days={calendarDays}
+              markedDates={markedDates}
+              onSelectDate={handleSelectDate}
+              startDate={startDate}
+              endDate={endDate}
+            />
+          </View>
 
-        <CalendarFilterBar activeFilter={activeFilter} onChangeFilter={setActiveFilter} />
+          {/* ── [1] STICKY BAR: bulan mini + filter ────────────────── */}
+          <View style={[
+            styles.stickyBar,
+            isSticky ? styles.stickyBarActive : null,
+          ]}>
+            {/* "June 2026" format */}
+            <Text style={styles.stickyMonthLabel}>
+              {monthTitle(monthDate)}{' '}
+              <Text style={styles.stickyYearLabel}>{yearTitle(monthDate)}</Text>
+            </Text>
+            <CalendarFilterBar activeFilter={activeFilter} onChangeFilter={setActiveFilter} />
+          </View>
 
-        <View style={styles.scheduleList}>
-          {visibleSchedules.length > 0 ? (
-            visibleSchedules.map((schedule) => (
-              <CalendarScheduleCard
-                isEditing={editingScheduleId === schedule.id}
-                key={schedule.id}
-                onDelete={() => handleDelete(schedule.id)}
-                onEdit={() => handleEdit(schedule.id)}
-                schedule={schedule}
-              />
-            ))
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No schedule on this date range</Text>
-              <Text style={styles.emptyText}>
-                Schedules created from AI prompt will be marked on the calendar.
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+          {/* ── [2] Schedule cards ──────────────────────────────────── */}
+          <View style={styles.scheduleList}>
+            {visibleSchedules.length > 0 ? (
+              visibleSchedules.map((schedule) => (
+                <CalendarScheduleCard
+                  isEditing={editingScheduleId === schedule.id}
+                  key={`${schedule.id}-${editingScheduleId === schedule.id}`}
+                  onDelete={() => handleDelete(schedule.id)}
+                  onEdit={() => handleEdit(schedule.id)}
+                  schedule={schedule}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>No schedule on this date range</Text>
+                <Text style={styles.emptyText}>
+                  Schedules created from AI prompt will be marked on the calendar.
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <CalendarBottomDock />
     </SafeAreaView>
@@ -150,10 +187,13 @@ export function CalendarPage() {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingBottom: 126,
+  calendarSection: {
+    paddingBottom: 8,
     paddingHorizontal: 24,
     paddingTop: 18,
+  },
+  content: {
+    paddingBottom: 126,
   },
   emptyCard: {
     backgroundColor: '#FFFFFF',
@@ -177,12 +217,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scheduleList: {
-    marginTop: 34,
+    marginTop: 16,
+    paddingHorizontal: 24,
   },
-  sectionTitle: {
+  // ── Sticky bar ─────────────────────────────────────────────────────
+  stickyBar: {
+    backgroundColor: '#FFFFFF',
+    paddingBottom: 14,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    // tidak ada border/shadow saat nyatu dengan background
+  },
+  stickyBarActive: {
+    borderBottomColor: '#E8EAF0',
+    borderBottomWidth: 0.5,
+  },
+  stickyMonthLabel: {
     color: '#111827',
-    fontSize: 18,
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  stickyYearLabel: {
+    color: '#665CFF',
+    fontSize: 15,
     fontWeight: '600',
-    marginTop: 34,
   },
 });

@@ -12,6 +12,7 @@ type OtpVerificationPageProps = {
   otp: string[];
   otpInputRefs: React.MutableRefObject<(TextInput | null)[]>;
   otpInputWidth: number;
+  onResendOtp?: () => void;
 };
 
 export function OtpVerificationPage({
@@ -23,6 +24,7 @@ export function OtpVerificationPage({
   otp,
   otpInputRefs,
   otpInputWidth,
+  onResendOtp,
 }: OtpVerificationPageProps) {
   const isDisabled = otp.some((digit) => !digit);
 
@@ -62,7 +64,7 @@ export function OtpVerificationPage({
       </View>
       <View className="mt-[26px] flex-row items-center justify-center">
         <Text className="text-[13px] text-muted">Did not receive the OTP? </Text>
-        <Pressable accessibilityLabel="Resend OTP" accessibilityRole="button">
+        <Pressable accessibilityLabel="Resend OTP" accessibilityRole="button" onPress={onResendOtp}>
           <Text className="text-[13px] text-[#6268FF]">Resend OTP</Text>
         </Pressable>
       </View>
