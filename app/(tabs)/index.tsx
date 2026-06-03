@@ -22,6 +22,7 @@ export default function HomeScreen() {
   const [phone, setPhone] = useState('');
   const [verificationId, setVerificationId] = useState('');
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
+  const [isOtpRequesting, setOtpRequesting] = useState(false);
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
 
   const { height, width } = useWindowDimensions();
@@ -135,21 +136,36 @@ export default function HomeScreen() {
   };
 
   const handleGetOtp = async () => {
-    if (phone.trim().length < 6) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+    if (isOtpRequesting) return;
+
+    const cleanedPhone = phone.replace(/[^0-9+]/g, '');
+    if (cleanedPhone.replace(/\D/g, '').length < 8) {
+      Alert.alert('Error', 'Please enter a valid WhatsApp phone number.');
       return;
     }
+
+    setOtpRequesting(true);
     try {
-      const res = await authApi.submitPhone(phone);
-      if (res.success && res.data) {
+      console.log('[Onboarding] Requesting OTP for phone', cleanedPhone);
+      const res = await authApi.submitPhone(cleanedPhone, 'ID');
+      console.log('[Onboarding] OTP response', res);
+      if (res.success && res.data?.verification_id) {
+        setPhone(cleanedPhone);
         setVerificationId(res.data.verification_id);
+        setOtp(['', '', '', '', '', '']);
         setStep('otp');
+        Alert.alert('OTP Sent', `We sent the code via ${res.data.otp_channel || 'WhatsApp/email'}.`);
       } else {
         Alert.alert('Error', 'Failed to send OTP. Please try again.');
       }
     } catch (err: any) {
-      console.warn('API phone submission failed', err);
-      Alert.alert('Error', err.response?.data?.message || 'Failed to send OTP. Please try again.');
+      console.warn('API phone submission failed', err.response?.data || err.message || err);
+      const validationMessage = err.response?.data?.errors
+        ? Object.values(err.response.data.errors).flat().join('\n')
+        : null;
+      Alert.alert('Error', validationMessage || err.response?.data?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setOtpRequesting(false);
     }
   };
 
@@ -256,6 +272,7 @@ export default function HomeScreen() {
         <PhoneOtpPage
           isCompactHeight={isCompactHeight}
           onChangePhone={setPhone}
+          isLoading={isOtpRequesting}
           onGetOtp={handleGetOtp}
           phone={phone}
         />
