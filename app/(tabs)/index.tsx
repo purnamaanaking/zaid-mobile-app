@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const [step, setStep] = useState<AuthStep>('welcome');
   const [phone, setPhone] = useState('');
   const [verificationId, setVerificationId] = useState('');
-  const [otp, setOtp] = useState<string[]>(['', '', '', '']);
+  const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
 
   const { height, width } = useWindowDimensions();
@@ -84,16 +84,18 @@ export default function HomeScreen() {
       const idToken = await signInWithGoogle();
       if (idToken) {
         if (idToken !== 'mock-google-id-token') {
-          // Call the backend endpoint to authenticate and get user/token details
-          const res = await authApi.loginWithGoogle(idToken);
+          // Call the backend endpoint to authenticate and get user/token details.
+          const res = await authApi.loginWithGoogle(idToken, {
+            device_name: 'zaid-mobile-app',
+            platform: 'expo',
+          });
           if (res.success && res.data) {
             const { access_token, onboarding, user: backendUser } = res.data;
-            
-            // Persist the token to SecureStore so subsequent onboarding requests are authenticated
+
+            // Persist the token so onboarding, calendar, prompts, and tasks use Sanctum auth.
             await SecureStore.setItemAsync('auth_token', access_token);
-            
+
             if (onboarding.next_step === 'dashboard') {
-              // If onboarding is already fully complete, log in to store directly
               await login(access_token, {
                 id: backendUser.id,
                 email: backendUser.email,
@@ -147,8 +149,8 @@ export default function HomeScreen() {
 
   const handleVerifyOtp = async () => {
     const otpCode = otp.join('');
-    if (otpCode.length < 4) {
-      Alert.alert('Error', 'Please enter the 4-digit code');
+    if (otpCode.length < 6) {
+      Alert.alert('Error', 'Please enter the 6-digit code');
       return;
     }
     try {
@@ -160,11 +162,11 @@ export default function HomeScreen() {
       if (res.success && res.data) {
         setStep('connect');
       } else {
-        setStep('connect');
+        Alert.alert('Error', 'OTP verification failed. Please try again.');
       }
     } catch (err: any) {
-      console.warn('API OTP verification failed, falling back to simulated connect', err);
-      setStep('connect');
+      console.warn('API OTP verification failed', err);
+      Alert.alert('Error', err.response?.data?.message || 'OTP is invalid or expired. Please try again.');
     }
   };
 
@@ -204,7 +206,7 @@ export default function HomeScreen() {
     newOtp[index] = cleanValue;
     setOtp(newOtp);
 
-    if (cleanValue && index < 3) {
+    if (cleanValue && index < otp.length - 1) {
       otpInputRefs.current[index + 1]?.focus();
     }
   };
@@ -260,7 +262,7 @@ export default function HomeScreen() {
           onVerify={handleVerifyOtp}
           otp={otp}
           otpInputRefs={otpInputRefs}
-          otpInputWidth={isNarrow ? 56 : 64}
+          otpInputWidth={isNarrow ? 38 : 46}
           onResendOtp={handleResendOtp}
         />
       )}

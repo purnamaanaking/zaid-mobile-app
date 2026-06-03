@@ -113,6 +113,18 @@ function parseTitle(text: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+
+function normalizeApiTime(value?: string | null): string {
+  if (!value) return '09:00';
+  const [hour = '09', minute = '00'] = value.split(':');
+  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+}
+
+function addOneHour(time: string): string {
+  const [h, m] = normalizeApiTime(time).split(':').map(Number);
+  return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 function parseRecurring(text: string): PromptSchedule['recurring'] {
   const lower = text.toLowerCase();
   if (/\bsetiap hari\b|\bdaily\b/.test(lower)) return 'daily';
@@ -140,7 +152,7 @@ function buildScheduleFromPrompt(prompt: string): PromptSchedule {
   const title = parseTitle(prompt);
   const date = parseDate(prompt, now);
   const endDate = parseEndDate(prompt, date, now);
-  const time = parseTime(prompt);
+  const time = normalizeApiTime(parseTime(prompt));
   const recurring = parseRecurring(prompt);
 
   return {
@@ -150,10 +162,7 @@ function buildScheduleFromPrompt(prompt: string): PromptSchedule {
     date,
     endDate,
     time,
-    endTime: (() => {
-      const [h, m] = time.split(':').map(Number);
-      return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    })(),
+    endTime: addOneHour(time),
     location: 'ZAID AI',
     description: prompt,
     reminderMinutes: 60,
@@ -364,41 +373,37 @@ export function AiPromptPage() {
       if (res.success && res.data) {
         const { parse_status, result, confirmation } = res.data;
         
-        if (parse_status === 'success' && result) {
+        if ((parse_status === 'success' || parse_status === 'parsed') && result) {
           const task = result.task || result;
           const now = new Date();
+          const time = normalizeApiTime(task.scheduled_time);
           setStatusText('Schedule detected by AI. Please verify before saving.');
           triggerSuccess(() => setPreview({
             id: task.id || `ai-${now.getTime()}`,
             userId: 'user-1',
             title: task.title || parseTitle(text),
             date: task.scheduled_date || dateKey(now),
-            time: task.scheduled_time || '09:00',
-            endTime: (() => {
-              const [h, m] = (task.scheduled_time || '09:00').split(':').map(Number);
-              return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-            })(),
+            time,
+            endTime: addOneHour(time),
             location: 'ZAID AI',
             description: task.description || '',
             reminderMinutes: 30,
-            status: 'active',
+            status: task.status === 'completed' ? 'done' : 'active',
             sourcePrompt: text,
-            createdAt: now.toISOString(),
-            updatedAt: now.toISOString(),
+            createdAt: task.created_at || now.toISOString(),
+            updatedAt: task.updated_at || now.toISOString(),
           }));
         } else if (parse_status === 'requires_confirmation' && confirmation) {
           const entities = confirmation.entities || {};
           const now = new Date();
+          const time = normalizeApiTime(entities.scheduled_time);
           setPreview({
             id: `ai-${now.getTime()}`,
             userId: 'user-1',
             title: entities.title || parseTitle(text),
             date: entities.scheduled_date || dateKey(now),
-            time: entities.scheduled_time || '09:00',
-            endTime: (() => {
-              const [h, m] = (entities.scheduled_time || '09:00').split(':').map(Number);
-              return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-            })(),
+            time,
+            endTime: addOneHour(time),
             location: 'ZAID AI',
             description: entities.description || '',
             reminderMinutes: 30,

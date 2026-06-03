@@ -13,7 +13,7 @@ export type TaskResource = {
   description: string | null;
   status: 'active' | 'completed';
   scheduled_date: string; // YYYY-MM-DD
-  scheduled_time: string | null; // HH:mm
+  scheduled_time: string | null; // HH:mm:ss
   timezone: string;
   all_day: boolean;
   is_recurring: boolean;
@@ -70,7 +70,7 @@ export type CreateTaskPayload = {
   title: string;
   description?: string | null;
   scheduled_date?: string | null;
-  scheduled_time?: string | null;
+  scheduled_time?: string | null; // HH:mm:ss
   timezone?: string | null;
   all_day?: boolean | null;
   recurrence?: TaskRecurrence | null;
