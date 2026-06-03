@@ -22,6 +22,7 @@ export default function HomeScreen() {
   const [verificationId, setVerificationId] = useState('');
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
   const [isOtpRequesting, setOtpRequesting] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
 
   const { height, width } = useWindowDimensions();
@@ -116,6 +117,7 @@ export default function HomeScreen() {
       return;
     }
 
+    setPhoneError('');
     setOtpRequesting(true);
     try {
       console.log('[Onboarding] Requesting OTP for phone', cleanedPhone);
@@ -135,7 +137,12 @@ export default function HomeScreen() {
       const validationMessage = err.response?.data?.errors
         ? Object.values(err.response.data.errors).flat().join('\n')
         : null;
-      Alert.alert('Error', validationMessage || err.response?.data?.message || 'Failed to send OTP. Please try again.');
+      const message = validationMessage || err.response?.data?.message || 'Failed to send OTP. Please try again.';
+      const friendlyMessage = message.toLowerCase().includes('already linked')
+        ? 'Nomor WhatsApp ini sudah dipakai di akun lain. Gunakan nomor lain atau login dengan akun Google pemilik nomor tersebut.'
+        : message;
+      setPhoneError(friendlyMessage);
+      Alert.alert('Nomor Tidak Bisa Dipakai', friendlyMessage);
     } finally {
       setOtpRequesting(false);
     }
@@ -230,8 +237,12 @@ export default function HomeScreen() {
       {step === 'phone' && (
         <PhoneOtpPage
           isCompactHeight={isCompactHeight}
-          onChangePhone={setPhone}
+          errorMessage={phoneError}
           isLoading={isOtpRequesting}
+          onChangePhone={(value) => {
+            setPhoneError('');
+            setPhone(value);
+          }}
           onGetOtp={handleGetOtp}
           phone={phone}
         />

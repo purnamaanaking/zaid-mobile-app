@@ -4,6 +4,7 @@ import { Button } from '@/src/components/ui/Button';
 import { GoogleMark } from '@/src/features/auth/components/AuthShared';
 
 type PhoneOtpPageProps = {
+  errorMessage?: string;
   isCompactHeight: boolean;
   isLoading?: boolean;
   onChangePhone: (phone: string) => void;
@@ -11,7 +12,14 @@ type PhoneOtpPageProps = {
   phone: string;
 };
 
-export function PhoneOtpPage({ isCompactHeight, isLoading = false, onChangePhone, onGetOtp, phone }: PhoneOtpPageProps) {
+export function PhoneOtpPage({
+  errorMessage,
+  isCompactHeight,
+  isLoading = false,
+  onChangePhone,
+  onGetOtp,
+  phone,
+}: PhoneOtpPageProps) {
   const isDisabled = isLoading || phone.replace(/\D/g, '').length < 8;
 
   return (
@@ -32,7 +40,7 @@ export function PhoneOtpPage({ isCompactHeight, isLoading = false, onChangePhone
       <View className="mt-8 w-full max-w-[340px]">
         <TextInput
           accessibilityLabel="Enter WhatsApp number"
-          className="h-[56px] rounded-2xl border border-[#D9DCE8] bg-white px-5 text-center text-base text-[#33333A]"
+          className="h-[56px] rounded-2xl border bg-white px-5 text-center text-base text-[#33333A]"
           keyboardType="phone-pad"
           maxLength={18}
           onChangeText={onChangePhone}
@@ -41,11 +49,18 @@ export function PhoneOtpPage({ isCompactHeight, isLoading = false, onChangePhone
           placeholderTextColor="#A6AEC4"
           returnKeyType="send"
           style={{
+            borderColor: errorMessage ? '#EF4444' : '#D9DCE8',
             includeFontPadding: false,
             textAlignVertical: 'center',
           }}
           value={phone}
         />
+
+        {errorMessage ? (
+          <Text className="mt-3 rounded-2xl bg-[#FEF2F2] px-4 py-3 text-center text-[13px] font-semibold leading-[19px] text-[#DC2626]">
+            {errorMessage}
+          </Text>
+        ) : null}
 
         <Button
           accessibilityLabel="Get OTP"
