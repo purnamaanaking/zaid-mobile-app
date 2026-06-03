@@ -116,6 +116,7 @@ function initializeGoogleWeb() {
   window.google.accounts.id.initialize({
     auto_select: false,
     callback: (response: GoogleCredentialResponse) => {
+      console.log('[GoogleAuth] Google credential callback received', Boolean(response.credential));
       const credential = response.credential ?? null;
       pendingWebResolve?.(credential);
       pendingWebResolve = null;
@@ -124,8 +125,9 @@ function initializeGoogleWeb() {
     },
     cancel_on_tap_outside: true,
     client_id: GOOGLE_WEB_CLIENT_ID,
+    itp_support: true,
     use_fedcm_for_prompt: false,
-  });
+  } as any);
 }
 
 export function addGoogleWebCredentialListener(listener: (idToken: string) => void) {
@@ -147,6 +149,7 @@ export async function renderGoogleWebButton(elementId: string): Promise<boolean>
     size: 'large',
     text: 'signin_with',
     theme: 'outline',
+    type: 'standard',
     width: Math.min(320, target.clientWidth || 320),
   } as any);
   return true;
