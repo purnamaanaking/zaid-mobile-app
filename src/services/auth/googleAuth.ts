@@ -1,7 +1,6 @@
 import { Platform } from 'react-native';
 
-// Dynamic require declarations to prevent Metro crashes if package is not installed
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Dynamic require declaration to prevent Metro crashes if the native package is unavailable.
 declare const require: any;
 
 type GoogleCredentialResponse = {
@@ -37,7 +36,7 @@ try {
   // Package not installed yet by developer
 }
 
-const GOOGLE_WEB_CLIENT_ID =
+export const GOOGLE_WEB_CLIENT_ID =
   process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
   '415497871679-kkjd4tuniojn2jgjbn6pavhjr4p2kf4t.apps.googleusercontent.com';
 
@@ -181,8 +180,7 @@ export const signInWithGoogle = async (): Promise<string | null> => {
   }
 
   if (!GoogleSignin) {
-    console.log('[GoogleAuth] Mock login triggered (Google Sign-In not installed).');
-    return 'mock-google-id-token';
+    throw new Error('Google Sign-In native module is not available. Rebuild the Expo development app after installing @react-native-google-signin/google-signin.');
   }
 
   try {
