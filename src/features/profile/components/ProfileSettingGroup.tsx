@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   description: {
     color: '#A4A4A4',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '400',
     marginTop: 5,
   },
   group: {

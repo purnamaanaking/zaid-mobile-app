@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#9CA3AF',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '400',
     lineHeight: 20,
     marginTop: 6,
     textAlign: 'center',
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   settingDesc: {
     color: '#9CA3AF',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '400',
     marginTop: 2,
   },
   settingLabel: {

@@ -7,13 +7,16 @@ import { CalendarFilterBar } from '@/src/features/calendar/components/CalendarFi
 import { CalendarGrid } from '@/src/features/calendar/components/CalendarGrid';
 import { CalendarHeader } from '@/src/features/calendar/components/CalendarHeader';
 import { CalendarScheduleCard } from '@/src/features/calendar/components/CalendarScheduleCard';
+import { CalendarTaskSheet } from '@/src/features/calendar/components/CalendarTaskSheet';
 import { CalendarFilter } from '@/src/features/calendar/types';
-import { buildCalendarDays, dateKey, monthTitle, yearTitle, shiftMonth } from '@/src/features/calendar/utils/date';
+import { buildCalendarDays, dateKey, formatSelectedDateLabel, shiftMonth } from '@/src/features/calendar/utils/date';
 import {
+  addPromptSchedule,
   deletePromptSchedule,
   usePromptSchedules,
   fetchPromptSchedules,
 } from '@/src/features/schedule/store/promptScheduleStore';
+import { PromptSchedule } from '@/src/types/schedule.types';
 
 export function CalendarPage() {
   const today = useMemo(() => new Date(), []);
@@ -24,6 +27,7 @@ export function CalendarPage() {
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [calendarSectionHeight, setCalendarSectionHeight] = useState(0);
   const [isSticky, setIsSticky] = useState(false);
+  const [taskSheetVisible, setTaskSheetVisible] = useState(false);
   const schedules = usePromptSchedules();
 
   useEffect(() => {
@@ -77,19 +81,48 @@ export function CalendarPage() {
     });
   }, [activeFilter, schedules, startDate, endDate, today]);
 
-  function handleSelectDate(value: string) {
-    if (!startDate || (startDate && endDate)) {
-      setStartDate(value);
-      setEndDate(null);
-    } else {
-      if (value < startDate) {
-        setStartDate(value);
-        setEndDate(null);
-      } else {
-        setEndDate(value);
-      }
+  const selectedDateLabel = useMemo(() => {
+    return startDate ? formatSelectedDateLabel(startDate, endDate) : formatSelectedDateLabel(dateKey(today));
+  }, [endDate, startDate, today]);
+
+  function syncMonthToDate(value: string) {
+    const selected = new Date(`${value}T00:00:00`);
+
+    if (selected.getMonth() !== monthDate.getMonth() || selected.getFullYear() !== monthDate.getFullYear()) {
+      setMonthDate(new Date(selected.getFullYear(), selected.getMonth(), 1));
     }
+  }
+
+  function handleRangeChange(rangeStart: string, rangeEnd: string) {
+    syncMonthToDate(rangeStart);
+    setStartDate(rangeStart);
+    setEndDate(rangeEnd);
     setActiveFilter('recent');
+  }
+
+  function handleRangeComplete(rangeStart: string, rangeEnd: string) {
+    handleRangeChange(rangeStart, rangeEnd);
+    setTaskSheetVisible(true);
+  }
+
+  function handleJumpToday() {
+    const todayKey = dateKey(today);
+    setMonthDate(new Date(today.getFullYear(), today.getMonth(), 1));
+    setStartDate(todayKey);
+    setEndDate(todayKey);
+    setActiveFilter('today');
+    setTaskSheetVisible(true);
+  }
+
+  function handleChangeFilter(filter: CalendarFilter) {
+    setActiveFilter(filter);
+
+    if (filter === 'today') {
+      const todayKey = dateKey(today);
+      setMonthDate(new Date(today.getFullYear(), today.getMonth(), 1));
+      setStartDate(todayKey);
+      setEndDate(todayKey);
+    }
   }
 
   function handleDelete(scheduleId: string) {
@@ -99,6 +132,10 @@ export function CalendarPage() {
 
   function handleEdit(scheduleId: string) {
     setEditingScheduleId((current) => (current === scheduleId ? null : scheduleId));
+  }
+
+  function handleAddManualSchedule(schedule: PromptSchedule) {
+    addPromptSchedule(schedule);
   }
 
   return (
@@ -134,11 +171,13 @@ export function CalendarPage() {
               monthDate={monthDate}
               onNextMonth={() => setMonthDate((current) => shiftMonth(current, 1))}
               onPreviousMonth={() => setMonthDate((current) => shiftMonth(current, -1))}
+              onTodayPress={handleJumpToday}
             />
             <CalendarGrid
               days={calendarDays}
               markedDates={markedDates}
-              onSelectDate={handleSelectDate}
+              onRangeChange={handleRangeChange}
+              onRangeComplete={handleRangeComplete}
               startDate={startDate}
               endDate={endDate}
             />
@@ -149,12 +188,10 @@ export function CalendarPage() {
             styles.stickyBar,
             isSticky ? styles.stickyBarActive : null,
           ]}>
-            {/* "June 2026" format */}
             <Text style={styles.stickyMonthLabel}>
-              {monthTitle(monthDate)}{' '}
-              <Text style={styles.stickyYearLabel}>{yearTitle(monthDate)}</Text>
+              {selectedDateLabel}
             </Text>
-            <CalendarFilterBar activeFilter={activeFilter} onChangeFilter={setActiveFilter} />
+            <CalendarFilterBar activeFilter={activeFilter} onChangeFilter={handleChangeFilter} />
           </View>
 
           {/* ── [2] Schedule cards ──────────────────────────────────── */}
@@ -181,6 +218,18 @@ export function CalendarPage() {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      <CalendarTaskSheet
+        editingScheduleId={editingScheduleId}
+        endDate={endDate}
+        onAddSchedule={handleAddManualSchedule}
+        onClose={() => setTaskSheetVisible(false)}
+        onDeleteSchedule={handleDelete}
+        onEditSchedule={handleEdit}
+        schedules={visibleSchedules}
+        startDate={startDate}
+        visible={taskSheetVisible}
+      />
+
       <CalendarBottomDock />
     </SafeAreaView>
   );
@@ -203,7 +252,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#98A4B8',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '400',
     lineHeight: 20,
     marginTop: 6,
   },
@@ -237,10 +286,5 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     marginBottom: 10,
-  },
-  stickyYearLabel: {
-    color: '#665CFF',
-    fontSize: 15,
-    fontWeight: '600',
   },
 });

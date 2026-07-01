@@ -221,3 +221,65 @@ File ini mencatat perubahan yang dibuat selama pengembangan proyek.
 - **Navbar Size & Floating Height**: Widened navbar (left/right margins 16), increased height to 74, and raised position (bottom 24).
 - **AI Icon Upgrade**: Replaced sparkle icon on the FAB button with dual-layered `FontAwesome` `bolt` icons (size 30 black outline behind size 24 white fill) to create a lightning bolt with a black outline.
 
+## 2026-06-30
+
+### Google Auth Development Bypass
+- Menganalisis masalah Google Auth `Error 400: origin_mismatch` dan mengidentifikasi penyebabnya sebagai mismatch `Authorized JavaScript origins` pada OAuth Web Client.
+- Menambahkan tombol `Continue as Demo` khusus development di halaman auth.
+- Membuat demo bypass hanya aktif saat `__DEV__` agar tidak muncul di production.
+- Menambahkan `DEV_DEMO_TOKEN` dan `DEV_DEMO_USER` di auth store.
+- Membuat token demo tetap valid secara lokal saat app reload di mode development, tanpa memanggil endpoint `/v1/me`.
+
+### AI Navigation Icon
+- Mengganti ikon AI menu dari petir menjadi ikon robot.
+- Menggunakan `MaterialCommunityIcons` icon `robot-happy` untuk tombol AI FAB.
+- Menambahkan animasi attention pada AI FAB berupa pulse ring dan scale halus.
+- Menghapus mapping ikon `bot.fill` yang tidak kompatibel dengan typing `expo-symbols`.
+
+### Calendar Interaction & Schedule Sheet
+- Mengubah pemilihan rentang tanggal di calendar dari tap tanggal pertama dan kedua menjadi gesture slide/drag langsung di grid tanggal.
+- Tap singkat tetap memilih satu tanggal.
+- Saat drag rentang selesai, calendar membuka popup sheet berisi daftar task pada rentang tanggal yang dipilih.
+- Menambahkan `CalendarTaskSheet.tsx` sebagai popup daftar task dari bawah.
+- Popup task dapat ditutup dengan drag turun atau tombol close.
+- Menambahkan tombol `+` di popup task untuk membuat task manual tanpa AI prompt.
+- Form task manual memakai tanggal atau rentang tanggal yang sedang dipilih sebagai default.
+- Menambahkan support task manual ke shared schedule store melalui `addPromptSchedule`.
+
+### Calendar UI Refinement
+- Menghapus badge tahun di header calendar bagian atas.
+- Mengubah kontrol header menjadi format `arrow kiri - Today - arrow kanan`.
+- Tombol `Today` langsung memilih tanggal hari ini, pindah ke bulan hari ini, dan membuka task hari ini.
+- Menghapus dot marker pada tanggal yang sedang selected, sehingga lingkaran ungu tidak menampilkan titik putih/hijau.
+- Dot hijau tetap tampil pada tanggal yang memiliki task selama tanggal tersebut tidak selected.
+- Mengubah sticky label bawah calendar dari format `July 2026` menjadi format tanggal lengkap:
+  - single date: `1 July 2026`
+  - same-month range: `1 - 5 July 2026`
+  - cross-month range: `30 July 2026 - 2 August 2026`
+
+### AI Chat Experience
+- Mengubah fitur AI prompt menjadi UI historical chat seperti ChatGPT.
+- Menambahkan bubble chat untuk user dan assistant.
+- Menambahkan auto-scroll ke pesan terbaru.
+- Menambahkan loading bubble dengan animasi titik saat AI memproses pesan.
+- Menghapus fitur voice recording dari AI flow.
+- Menghapus tombol mic dari composer.
+- Menghapus modal simulasi voice dan fake transcript.
+- Menjaga fitur attach file untuk dokumen dan gambar.
+- Mengubah tipe attachment prompt menjadi `document | image`.
+- Setelah user mengirim pesan atau file, assistant membalas hasil ekstraksi schedule di chat.
+- Modal preview schedule tetap muncul sebelum schedule disimpan.
+- Setelah schedule disimpan, chat menambahkan pesan konfirmasi bahwa task tersimpan ke Dashboard dan Calendar.
+
+### AI Header, Typography, and Composer Polish
+- Menghapus logo gambar ZAID di top content AI.
+- Mengganti header AI menjadi teks `ZAID` dengan subtitle `Schedule assistant`.
+- Menyeragamkan font di fitur AI menggunakan token Poppins dari `src/constants/typography.ts`.
+- Menyesuaikan ukuran dan family font untuk brand, subtitle, bubble chat, status text, attachment label, dan success label.
+- Mengubah composer menjadi input chat bawah dengan attach button, text input, dan send button.
+- Menyamakan background text input composer dengan container putih.
+- Membuat posisi teks input lebih center secara vertikal, bukan menempel di bagian atas.
+
+### Verification
+- `npx tsc --noEmit` berhasil setelah perubahan AI, Calendar, dan Auth development bypass.
+- `npm run lint` berhasil. Warning tersisa berasal dari file lama yang tidak terkait perubahan terbaru.

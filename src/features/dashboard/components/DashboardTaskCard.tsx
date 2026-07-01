@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   promptText: {
     color: '#B2BBCB',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '400',
     marginTop: 6,
   },
   taskBody: {
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   taskDescription: {
     color: '#99A5BB',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '400',
     lineHeight: 19,
     marginTop: 10,
   },

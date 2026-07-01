@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useWindowDimensions, TextInput, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 
-import { useAuthStore } from '@/src/store/auth.store';
+import { DEV_DEMO_TOKEN, DEV_DEMO_USER, useAuthStore } from '@/src/store/auth.store';
 import { authApi } from '@/src/services/api/auth.api';
 import { DashboardPage } from '@/src/features/dashboard/pages/DashboardPage';
 import { AuthPage } from '@/src/features/auth/pages/AuthPage';
@@ -106,6 +106,13 @@ export default function HomeScreen() {
       console.warn('Google Sign-in failed', err);
       Alert.alert('Google Sign-in Failed', err.response?.data?.message || err.message || 'Please choose a Google account and try again.');
     }
+  };
+
+  const handleDemoSignIn = async () => {
+    if (!__DEV__) return;
+
+    await login(DEV_DEMO_TOKEN, DEV_DEMO_USER);
+    setStep('google');
   };
 
   const handleGetOtp = async () => {
@@ -230,6 +237,7 @@ export default function HomeScreen() {
       {step === 'google' && (
         <AuthPage
           isCompactHeight={isCompactHeight}
+          onDemoSignIn={handleDemoSignIn}
           onGoogleCredential={completeGoogleLogin}
           onGoogleSignIn={handleGoogleSignIn}
         />

@@ -1,11 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Fonts } from '@/src/constants/typography';
+
 type AiPromptComposerProps = {
   isProcessing: boolean;
   onAttachFile: () => void;
   onChangePrompt: (value: string) => void;
-  onRecordVoice: () => void;
   onSubmit: () => void;
   prompt: string;
   attachedFile: { name: string; type: string } | null;
@@ -18,7 +19,6 @@ export function AiPromptComposer({
   isProcessing,
   onAttachFile,
   onChangePrompt,
-  onRecordVoice,
   onSubmit,
   prompt,
   attachedFile,
@@ -30,23 +30,6 @@ export function AiPromptComposer({
 
   return (
     <View style={[styles.card, { marginBottom: currentMarginBottom }]}>
-      <View style={styles.titleRow}>
-        <View style={styles.logoMark}>
-          <MaterialIcons name="auto-awesome" color="#FFFFFF" size={16} />
-        </View>
-        <Text style={styles.title}>AI Task Assistant</Text>
-      </View>
-
-      <TextInput
-        accessibilityLabel="Prompt schedule text"
-        multiline
-        onChangeText={onChangePrompt}
-        placeholder="Buatkan task laporan penjualan setiap Jumat jam 10 pagi"
-        placeholderTextColor="#6B7280"
-        style={styles.input}
-        value={prompt}
-      />
-
       {/* Render Attached File Badge if present */}
       {attachedFile && (
         <View style={styles.attachmentBadge}>
@@ -76,26 +59,26 @@ export function AiPromptComposer({
           style={styles.iconButton}>
           <MaterialIcons name="attach-file" color="#665CFF" size={27} />
         </Pressable>
-        <View style={styles.rightActions}>
-          <Pressable
-            accessibilityLabel="Record voice prompt"
-            accessibilityRole="button"
-            onPress={onRecordVoice}
-            style={styles.iconButton}>
-            <MaterialIcons name="mic-none" color="#9A8CFF" size={29} />
-          </Pressable>
-          <Pressable
-            accessibilityLabel="Send AI prompt"
-            accessibilityRole="button"
-            disabled={isProcessing || (!prompt.trim() && !attachedFile)}
-            onPress={onSubmit}
-            style={[
-              styles.sendButton,
-              isProcessing || (!prompt.trim() && !attachedFile) ? styles.sendDisabled : null,
-            ]}>
-            <MaterialIcons name={isProcessing ? 'hourglass-empty' : 'send'} color="#FFFFFF" size={24} />
-          </Pressable>
-        </View>
+        <TextInput
+          accessibilityLabel="Prompt schedule text"
+          multiline
+          onChangeText={onChangePrompt}
+          placeholder="Message ZAID AI..."
+          placeholderTextColor="#8A93A5"
+          style={styles.input}
+          value={prompt}
+        />
+        <Pressable
+          accessibilityLabel="Send AI prompt"
+          accessibilityRole="button"
+          disabled={isProcessing || (!prompt.trim() && !attachedFile)}
+          onPress={onSubmit}
+          style={[
+            styles.sendButton,
+            isProcessing || (!prompt.trim() && !attachedFile) ? styles.sendDisabled : null,
+          ]}>
+          <MaterialIcons name={isProcessing ? 'hourglass-empty' : 'send'} color="#FFFFFF" size={22} />
+        </Pressable>
       </View>
     </View>
   );
@@ -105,18 +88,17 @@ const styles = StyleSheet.create({
   actionRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
+    gap: 8,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#665CFF',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    padding: 18,
+    borderColor: '#E6E8F0',
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 10,
     marginHorizontal: 24,
     marginBottom: 24,
-    shadowColor: '#665CFF',
+    shadowColor: '#1D2433',
     shadowOffset: { height: 8, width: 0 },
     shadowOpacity: 0.1,
     shadowRadius: 18,
@@ -129,50 +111,29 @@ const styles = StyleSheet.create({
     width: 38,
   },
   input: {
-    backgroundColor: '#F0F2F6',
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
     color: '#273044',
+    flex: 1,
+    fontFamily: Fonts.bodyMedium,
     fontSize: 16,
-    fontWeight: '600',
     lineHeight: 22,
-    marginTop: 14,
-    minHeight: 80,
-    padding: 16,
-    textAlignVertical: 'top',
-  },
-  logoMark: {
-    alignItems: 'center',
-    backgroundColor: '#111827',
-    borderRadius: 10,
-    height: 21,
-    justifyContent: 'center',
-    width: 21,
-  },
-  rightActions: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
+    maxHeight: 112,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    textAlignVertical: 'center',
   },
   sendButton: {
     alignItems: 'center',
     backgroundColor: '#665CFF',
-    borderRadius: 19,
-    height: 38,
+    borderRadius: 22,
+    height: 44,
     justifyContent: 'center',
-    width: 38,
+    width: 44,
   },
   sendDisabled: {
     opacity: 0.48,
-  },
-  title: {
-    color: '#665CFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  titleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
   },
   attachmentBadge: {
     flexDirection: 'row',
@@ -181,15 +142,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    marginTop: 10,
+    marginBottom: 8,
     alignSelf: 'flex-start',
     maxWidth: '100%',
     gap: 6,
   },
   attachmentText: {
     color: '#374151',
+    fontFamily: Fonts.bodyRegular,
     fontSize: 13,
-    fontWeight: '600',
+    lineHeight: 18,
     flexShrink: 1,
   },
   removeAttachmentButton: {

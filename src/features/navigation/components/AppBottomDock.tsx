@@ -1,7 +1,7 @@
-import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { Href, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, Keyboard, Platform } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export type AppTabKey = 'home' | 'schedule' | 'notification' | 'profile';
 
@@ -24,6 +24,7 @@ const TAB_ITEMS: {
 export function AppBottomDock({ activeTab }: AppBottomDockProps) {
   const router = useRouter();
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const attentionAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -38,9 +39,57 @@ export function AppBottomDock({ activeTab }: AppBottomDockProps) {
     };
   }, []);
 
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(attentionAnim, {
+          duration: 1100,
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(attentionAnim, {
+          duration: 900,
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [attentionAnim]);
+
   if (isKeyboardVisible) {
     return null;
   }
+
+  const pulseStyle = {
+    opacity: attentionAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.35, 0],
+    }),
+    transform: [
+      {
+        scale: attentionAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 1.6],
+        }),
+      },
+    ],
+  };
+  const iconScaleStyle = {
+    transform: [
+      {
+        scale: attentionAnim.interpolate({
+          inputRange: [0, 0.45, 1],
+          outputRange: [1, 1.08, 1],
+        }),
+      },
+    ],
+  };
 
   return (
     <View pointerEvents="box-none" style={styles.bottomDockWrap}>
@@ -70,10 +119,11 @@ export function AppBottomDock({ activeTab }: AppBottomDockProps) {
         accessibilityRole="button"
         onPress={() => router.push('/ai' as Href)}
         style={styles.fab}>
-        <View style={styles.boltIconContainer}>
-          <FontAwesome name="bolt" color="#000000" size={30} style={styles.boltOutline} />
-          <FontAwesome name="bolt" color="#FFFFFF" size={24} style={styles.boltFill} />
-        </View>
+        <Animated.View pointerEvents="none" style={[styles.fabPulse, pulseStyle]} />
+        <Animated.View style={[styles.aiIconContainer, iconScaleStyle]}>
+          <MaterialCommunityIcons name="robot-happy" color="#FFFFFF" size={34} />
+          <View style={styles.aiStatusDot} />
+        </Animated.View>
       </Pressable>
     </View>
   );
@@ -107,18 +157,23 @@ const styles = StyleSheet.create({
   addButtonSpace: {
     width: 58,
   },
-  boltFill: {
-    position: 'absolute',
-  },
-  boltIconContainer: {
+  aiIconContainer: {
     alignItems: 'center',
     height: 40,
     justifyContent: 'center',
     position: 'relative',
     width: 40,
   },
-  boltOutline: {
+  aiStatusDot: {
+    backgroundColor: '#A7F3D0',
+    borderColor: '#665CFF',
+    borderRadius: 999,
+    borderWidth: 2,
+    height: 11,
+    right: 4,
+    top: 5,
     position: 'absolute',
+    width: 11,
   },
   bottomDock: {
     alignItems: 'center',
@@ -155,6 +210,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 20,
     width: 64,
+  },
+  fabPulse: {
+    backgroundColor: '#665CFF',
+    borderRadius: 44,
+    height: 76,
+    position: 'absolute',
+    width: 76,
   },
   navIndicator: {
     backgroundColor: '#675CFF',

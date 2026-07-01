@@ -1,22 +1,20 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { monthTitle, yearTitle } from '@/src/features/calendar/utils/date';
+import { monthTitle } from '@/src/features/calendar/utils/date';
 
 type CalendarHeaderProps = {
   monthDate: Date;
   onNextMonth: () => void;
   onPreviousMonth: () => void;
+  onTodayPress: () => void;
 };
 
-export function CalendarHeader({ monthDate, onNextMonth, onPreviousMonth }: CalendarHeaderProps) {
+export function CalendarHeader({ monthDate, onNextMonth, onPreviousMonth, onTodayPress }: CalendarHeaderProps) {
   return (
     <View style={styles.header}>
       <View style={styles.titleRow}>
         <Text style={styles.month}>{monthTitle(monthDate)}</Text>
-        <View style={styles.yearBadge}>
-          <Text style={styles.yearText}>{yearTitle(monthDate)}</Text>
-        </View>
       </View>
       <View style={styles.actions}>
         <Pressable
@@ -25,6 +23,13 @@ export function CalendarHeader({ monthDate, onNextMonth, onPreviousMonth }: Cale
           onPress={onPreviousMonth}
           style={styles.iconButton}>
           <MaterialIcons name="chevron-left" color="#445066" size={34} />
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Jump to today"
+          accessibilityRole="button"
+          onPress={onTodayPress}
+          style={styles.todayButton}>
+          <Text style={styles.todayText}>Today</Text>
         </Pressable>
         <Pressable
           accessibilityLabel="Next month"
@@ -40,8 +45,9 @@ export function CalendarHeader({ monthDate, onNextMonth, onPreviousMonth }: Cale
 
 const styles = StyleSheet.create({
   actions: {
+    alignItems: 'center',
     flexDirection: 'row',
-    gap: 14,
+    gap: 10,
   },
   header: {
     alignItems: 'center',
@@ -65,15 +71,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
-  yearBadge: {
-    backgroundColor: '#E9E8FF',
-    borderRadius: 10,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
+  todayButton: {
+    alignItems: 'center',
+    backgroundColor: '#F3F1FF',
+    borderRadius: 999,
+    height: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
   },
-  yearText: {
+  todayText: {
     color: '#665CFF',
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   optionMeta: {
     color: '#8F9AAF',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '400',
     marginTop: 5,
   },
   optionText: {
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   subtitle: {
     color: '#8F9AAF',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '400',
     lineHeight: 20,
     marginTop: 8,
   },

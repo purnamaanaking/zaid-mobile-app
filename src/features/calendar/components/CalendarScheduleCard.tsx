@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   promptText: {
     color: '#B2BBCB',
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '400',
     marginTop: 8,
   },
   metaChip: {

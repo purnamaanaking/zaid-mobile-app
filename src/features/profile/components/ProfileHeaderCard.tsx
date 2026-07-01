@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   handle: {
     color: 'rgba(255,255,255,0.78)',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '400',
     marginTop: 4,
   },
   name: {
