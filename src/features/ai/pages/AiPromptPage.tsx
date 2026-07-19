@@ -20,9 +20,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AiPromptComposer } from '@/src/features/ai/components/AiPromptComposer';
 import { SchedulePreviewModal } from '@/src/features/ai/components/SchedulePreviewModal';
 import { Fonts } from '@/src/constants/typography';
-import { addPromptSchedule } from '@/src/features/schedule/store/promptScheduleStore';
+import { addPromptSchedule, fetchPromptSchedules } from '@/src/features/schedule/store/promptScheduleStore';
 import { extractApi, PromptAttachment } from '@/src/services/api/extract.api';
 import { PromptSchedule } from '@/src/types/schedule.types';
+
+type ParsedSchedule = {
+  schedule: PromptSchedule;
+  backendSaved: boolean;
+  promptRequestId?: string;
+};
 
 type ChatMessage = {
   attachment?: {
@@ -40,72 +46,6 @@ function dateKey(date: Date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
-}
-
-function parseDate(text: string, now: Date): string {
-  const lower = text.toLowerCase();
-  const nextDate = new Date(now);
-
-  if (/\bbesok\b/.test(lower)) {
-    nextDate.setDate(now.getDate() + 1);
-    return dateKey(nextDate);
-  }
-  if (/\blusa\b/.test(lower)) {
-    nextDate.setDate(now.getDate() + 2);
-    return dateKey(nextDate);
-  }
-  if (/\bminggu depan\b/.test(lower)) {
-    nextDate.setDate(now.getDate() + 7);
-    return dateKey(nextDate);
-  }
-  if (/\bhari ini\b|\bsekarang\b/.test(lower)) {
-    return dateKey(now);
-  }
-
-  const dayMap: Record<string, number> = {
-    minggu: 0,
-    senin: 1,
-    selasa: 2,
-    rabu: 3,
-    kamis: 4,
-    jumat: 5,
-    sabtu: 6,
-  };
-
-  for (const [dayName, dayIndex] of Object.entries(dayMap)) {
-    if (new RegExp(`\\b${dayName}\\b`).test(lower)) {
-      const current = now.getDay();
-      let diff = dayIndex - current;
-      if (diff <= 0) diff += 7;
-      nextDate.setDate(now.getDate() + diff);
-      return dateKey(nextDate);
-    }
-  }
-
-  const isoMatch = text.match(/\b(\d{4}-\d{2}-\d{2})\b/);
-  if (isoMatch) return isoMatch[1];
-
-  return dateKey(now);
-}
-
-function parseTime(text: string): string {
-  const lower = text.toLowerCase();
-  const timeMatch = lower.match(/jam\s+(\d{1,2})(?::(\d{2}))?\s*(pagi|siang|sore|malam)?/);
-
-  if (timeMatch) {
-    let hour = parseInt(timeMatch[1], 10);
-    const minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-    const period = timeMatch[3];
-    if ((period === 'siang' || period === 'sore' || period === 'malam') && hour < 12) hour += 12;
-    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-  }
-
-  const colonMatch = text.match(/\b(\d{1,2})[.:h](\d{2})\b/);
-  if (colonMatch) {
-    return `${String(parseInt(colonMatch[1], 10)).padStart(2, '0')}:${colonMatch[2]}`;
-  }
-
-  return '09:00';
 }
 
 function parseTitle(text: string): string {
@@ -132,46 +72,26 @@ function addOneHour(time: string): string {
   return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-function parseRecurring(text: string): PromptSchedule['recurring'] {
-  const lower = text.toLowerCase();
-  if (/\bsetiap hari\b|\bdaily\b/.test(lower)) return 'daily';
-  if (/\bsetiap minggu\b|\bmingguan\b|\bweekly\b/.test(lower)) return 'weekly';
-  if (/\bsetiap bulan\b|\bbulanan\b|\bmonthly\b/.test(lower)) return 'monthly';
-  return 'none';
-}
-
-function parseEndDate(text: string, startDateKey: string, now: Date): string | undefined {
-  const lower = text.toLowerCase();
-  const rangeMatch = lower.match(/(?:sampai|hingga|s\/d|\bto\b)\s+(.*)/);
-  if (!rangeMatch) return undefined;
-
-  const parsed = parseDate(rangeMatch[1], now);
-  return parsed && parsed >= startDateKey ? parsed : undefined;
-}
-
-function buildScheduleFromPrompt(prompt: string): PromptSchedule {
+function taskToSchedule(task: any, sourcePrompt: string): PromptSchedule {
   const now = new Date();
-  const title = parseTitle(prompt);
-  const date = parseDate(prompt, now);
-  const endDate = parseEndDate(prompt, date, now);
-  const time = normalizeApiTime(parseTime(prompt));
-
+  const time = normalizeApiTime(task.scheduled_time);
   return {
-    id: `ai-${now.getTime()}`,
-    userId: 'user-1',
-    title,
-    date,
-    endDate,
+    id: task.id || `ai-${now.getTime()}`,
+    userId: 'current-user',
+    title: task.title || parseTitle(sourcePrompt),
+    date: task.scheduled_date || dateKey(now),
     time,
     endTime: addOneHour(time),
-    location: 'ZAID AI',
-    description: prompt,
-    reminderMinutes: 60,
-    recurring: parseRecurring(prompt),
-    sourcePrompt: prompt,
-    status: 'active',
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
+    location: task.location || 'ZAID',
+    description: task.description || '',
+    reminderMinutes: task.reminder_minutes_before || 30,
+    reminderEnabled: Boolean(task.reminder_minutes_before),
+    reminderChannel: task.reminder_channel || 'whatsapp',
+    recurring: task.recurrence?.type || 'none',
+    sourcePrompt,
+    status: task.status === 'completed' ? 'done' : 'active',
+    createdAt: task.created_at || now.toISOString(),
+    updatedAt: task.updated_at || now.toISOString(),
   };
 }
 
@@ -193,6 +113,8 @@ export function AiPromptPage() {
   const [preview, setPreview] = useState<PromptSchedule | null>(null);
   const [attachedFile, setAttachedFile] = useState<{ name: string; type: string } | null>(null);
   const [attachments, setAttachments] = useState<PromptAttachment[] | null>(null);
+  const [pendingPromptRequestId, setPendingPromptRequestId] = useState<string | null>(null);
+  const [previewAlreadySaved, setPreviewAlreadySaved] = useState(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -293,52 +215,28 @@ export function AiPromptPage() {
     const res = await extractApi.processPrompt(text, currentAttachments);
 
     if (res.success && res.data) {
-      const { parse_status, result, confirmation } = res.data;
+      const { parse_status, result } = res.data;
 
-      if ((parse_status === 'success' || parse_status === 'parsed') && result) {
-        const task = result.task || result;
-        const now = new Date();
-        const time = normalizeApiTime(task.scheduled_time);
+      if (res.data.requires_confirmation) {
+        const entities = res.data.confirmation?.entities;
+        if (!entities) throw new Error(res.data.human_response || 'ZAID meminta konfirmasi, tetapi detail tidak tersedia.');
         return {
-          id: task.id || `ai-${now.getTime()}`,
-          userId: 'user-1',
-          title: task.title || parseTitle(text),
-          date: task.scheduled_date || dateKey(now),
-          time,
-          endTime: addOneHour(time),
-          location: 'ZAID AI',
-          description: task.description || '',
-          reminderMinutes: 30,
-          status: task.status === 'completed' ? 'done' : 'active',
-          sourcePrompt: text,
-          createdAt: task.created_at || now.toISOString(),
-          updatedAt: task.updated_at || now.toISOString(),
-        } satisfies PromptSchedule;
+          schedule: taskToSchedule(entities, text),
+          backendSaved: false,
+          promptRequestId: res.data.prompt_request_id,
+        } satisfies ParsedSchedule;
       }
 
-      if (parse_status === 'requires_confirmation' && confirmation) {
-        const entities = confirmation.entities || {};
-        const now = new Date();
-        const time = normalizeApiTime(entities.scheduled_time);
+      if (parse_status === 'parsed' && result) {
         return {
-          id: `ai-${now.getTime()}`,
-          userId: 'user-1',
-          title: entities.title || parseTitle(text),
-          date: entities.scheduled_date || dateKey(now),
-          time,
-          endTime: addOneHour(time),
-          location: 'ZAID AI',
-          description: entities.description || '',
-          reminderMinutes: 30,
-          status: 'active',
-          sourcePrompt: text,
-          createdAt: now.toISOString(),
-          updatedAt: now.toISOString(),
-        } satisfies PromptSchedule;
+          schedule: taskToSchedule(result.task || result, text),
+          backendSaved: Boolean(result.task?.id || result.id),
+          promptRequestId: res.data.prompt_request_id,
+        } satisfies ParsedSchedule;
       }
     }
 
-    return buildScheduleFromPrompt(text);
+    throw new Error(res.data?.human_response || 'ZAID tidak menemukan jadwal yang bisa disimpan.');
   }
 
   async function handleSubmit() {
@@ -368,21 +266,21 @@ export function AiPromptPage() {
     setIsProcessing(true);
 
     try {
-      const schedule = await parseSchedule(text, currentAttachments);
+      const parsed = await parseSchedule(text, currentAttachments);
       replaceMessage(thinkingId, {
         status: 'success',
-        text: buildScheduleSummary(schedule),
+        text: buildScheduleSummary(parsed.schedule),
       });
-      triggerSuccess(() => setPreview(schedule));
+      setPendingPromptRequestId(parsed.backendSaved ? null : parsed.promptRequestId || null);
+      setPreviewAlreadySaved(parsed.backendSaved);
+      triggerSuccess(() => setPreview(parsed.schedule));
     } catch (err: any) {
       const apiErrMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
-      console.warn('Backend LLM parsing failed, using local regex parser fallback:', apiErrMsg);
-      const localParsed = buildScheduleFromPrompt(text);
+      console.warn('Backend prompt processing failed:', apiErrMsg);
       replaceMessage(thinkingId, {
-        status: 'success',
-        text: `${buildScheduleSummary(localParsed)} I used local parsing because the API was unavailable.`,
+        status: 'error',
+        text: apiErrMsg || 'ZAID gagal memproses pesan. Coba lagi.',
       });
-      triggerSuccess(() => setPreview(localParsed));
     } finally {
       setIsProcessing(false);
     }
@@ -401,6 +299,10 @@ export function AiPromptPage() {
       const mime = asset.mimeType || '';
       let type: 'document' | 'image' = 'document';
       if (mime.startsWith('image/')) type = 'image';
+      if (type !== 'image') {
+        Alert.alert('Format belum didukung', 'Backend AI saat ini menerima lampiran gambar. Gunakan JPG, PNG, atau WEBP.');
+        return;
+      }
 
       setIsProcessing(true);
 
@@ -415,7 +317,7 @@ export function AiPromptPage() {
         if (uploadRes.success && uploadRes.data) {
           setAttachedFile({ name: asset.name, type: asset.mimeType || 'document' });
           setAttachments([{
-            type: type === 'image' ? 'image' : 'document',
+            type: 'image',
             url: uploadRes.data.url,
             text: `File: ${asset.name}`,
           }]);
@@ -424,13 +326,8 @@ export function AiPromptPage() {
         }
       } catch (uploadErr: any) {
         const errMsg = uploadErr.response?.data?.error?.message || uploadErr.message;
-        console.warn('File upload failed, falling back to local simulation:', errMsg);
-        setAttachedFile({ name: asset.name, type: asset.mimeType || 'document' });
-        setAttachments([{
-          type: type === 'image' ? 'image' : 'document',
-          url: `https://zaid-assist.my.id/storage/mocks/${asset.name}`,
-          text: `Local mock file: ${asset.name}`,
-        }]);
+        console.warn('File upload failed:', errMsg);
+        Alert.alert('Upload gagal', errMsg || 'Lampiran gagal diunggah. Coba lagi.');
       }
     } catch (err) {
       console.warn('Error picking document', err);
@@ -439,10 +336,27 @@ export function AiPromptPage() {
     }
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!preview) return;
 
-    addPromptSchedule(preview);
+    try {
+      if (pendingPromptRequestId) {
+        const confirmation = await extractApi.confirmPrompt(pendingPromptRequestId, true);
+        if (!confirmation.success || !confirmation.data?.result) {
+          throw new Error(confirmation.data?.human_response || 'Konfirmasi prompt gagal.');
+        }
+      } else if (!previewAlreadySaved) {
+        await addPromptSchedule(preview);
+      } else {
+        await fetchPromptSchedules();
+      }
+    } catch (err: any) {
+      Alert.alert('Gagal menyimpan', err.response?.data?.message || err.message || 'Coba lagi.');
+      return;
+    }
+
+    setPendingPromptRequestId(null);
+    setPreviewAlreadySaved(false);
     appendMessage({
       id: `saved-${Date.now()}`,
       role: 'assistant',

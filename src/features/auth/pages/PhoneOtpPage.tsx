@@ -1,7 +1,7 @@
 import { Text, TextInput, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
-import { GoogleMark } from '@/src/features/auth/components/AuthShared';
+import { ZaidLogo } from '@/src/features/auth/components/AuthShared';
 
 type PhoneOtpPageProps = {
   errorMessage?: string;
@@ -27,7 +27,7 @@ export function PhoneOtpPage({
       <View
         className="items-center justify-center rounded-[28px] bg-[#F6F4FF]"
         style={{ height: isCompactHeight ? 70 : 82, width: isCompactHeight ? 70 : 82 }}>
-        <GoogleMark />
+        <ZaidLogo size="small" />
       </View>
 
       <Text className="mt-6 text-center text-[24px] font-semibold text-[#303244]">

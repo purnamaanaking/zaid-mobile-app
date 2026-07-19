@@ -5,16 +5,19 @@ import {
   useFonts,
 } from '@expo-google-fonts/poppins';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Redirect, Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Text, TextInput, TextInputProps, TextProps } from 'react-native';
+import { AppState, Text, TextInput, TextInputProps, TextProps } from 'react-native';
 import 'react-native-reanimated';
 import '@/global.css';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Fonts } from '@/src/constants/typography';
-import { checkAuth } from '@/src/store/auth.store';
+import { addUnauthorizedListener } from '@/src/services/api/client';
+import { addNotificationResponseListener, configureNativeNotifications } from '@/src/services/notifications/nativeNotifications';
+import { fetchReminders } from '@/src/features/reminders/store/reminderStore';
+import { checkAuth, logout, useAuthStore } from '@/src/store/auth.store';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -42,18 +45,43 @@ export default function RootLayout() {
     Poppins_600SemiBold,
   });
 
+  const { isAuthenticated, isInitialized } = useAuthStore();
+  const segments = useSegments();
+
   useEffect(() => {
     checkAuth();
+    void configureNativeNotifications(false);
+    void fetchReminders();
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void fetchReminders();
+    });
+    const notificationSubscription = addNotificationResponseListener(({ taskId, calendarEventId }) => {
+      if (taskId) router.push(`/schedule/${taskId}`);
+      else if (calendarEventId) router.push('/explore');
+    });
+    const unsubscribeUnauthorized = addUnauthorizedListener(() => void logout());
+    return () => {
+      notificationSubscription.remove();
+      appStateSubscription.remove();
+      unsubscribeUnauthorized();
+    };
   }, []);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !isInitialized) {
     return null;
   }
+
+  const inAuthGroup = segments[0] === '(auth)';
+  if (!isAuthenticated && !inAuthGroup) return <Redirect href={{ pathname: '/(auth)/index' } as never} />;
+  if (isAuthenticated && inAuthGroup) return <Redirect href="/(tabs)" />;
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(app)" options={{ headerShown: false }} />
+        <Stack.Screen name="schedule/[id]" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />

@@ -9,7 +9,7 @@ import { DashboardSearch } from '@/src/features/dashboard/components/DashboardSe
 import { DashboardTaskCard } from '@/src/features/dashboard/components/DashboardTaskCard';
 import { EmptyScheduleState } from '@/src/features/dashboard/components/EmptyScheduleState';
 import { buildMonthDays, dateKey } from '@/src/features/dashboard/utils/date';
-import { usePromptSchedules, fetchPromptSchedules } from '@/src/features/schedule/store/promptScheduleStore';
+import { usePromptSchedulesState, fetchPromptSchedules } from '@/src/features/schedule/store/promptScheduleStore';
 import { useAuthStore } from '@/src/store/auth.store';
 
 export function DashboardPage() {
@@ -17,7 +17,7 @@ export function DashboardPage() {
   const today = useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = useState(dateKey(today));
   const [search, setSearch] = useState('');
-  const promptSchedules = usePromptSchedules();
+  const { schedules: promptSchedules, isLoading, error } = usePromptSchedulesState();
   const { user } = useAuthStore();
 
   // ── animasi lambaian tangan ──────────────────────────────────────
@@ -107,7 +107,13 @@ export function DashboardPage() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}>
           <View style={styles.taskList}>
-            {schedules.length > 0 ? (
+            {isLoading ? (
+              <Text style={styles.stateText}>Memuat jadwal…</Text>
+            ) : error ? (
+              <Text accessibilityRole="alert" onPress={() => void fetchPromptSchedules()} style={styles.errorText}>
+                {error} Tekan untuk mencoba lagi.
+              </Text>
+            ) : schedules.length > 0 ? (
               schedules.map((schedule) => <DashboardTaskCard key={schedule.id} schedule={schedule} />)
             ) : (
               <EmptyScheduleState />
@@ -151,6 +157,19 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: '600',
     letterSpacing: 0,
+  },
+  errorText: {
+    color: '#B42318',
+    fontSize: 14,
+    lineHeight: 21,
+    paddingVertical: 24,
+    textAlign: 'center',
+  },
+  stateText: {
+    color: '#69738D',
+    fontSize: 14,
+    paddingVertical: 24,
+    textAlign: 'center',
   },
   safeArea: {
     backgroundColor: 'transparent',

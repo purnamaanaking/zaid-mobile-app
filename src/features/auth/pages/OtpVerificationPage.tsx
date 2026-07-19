@@ -1,7 +1,7 @@
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
-import { GoogleMark } from '@/src/features/auth/components/AuthShared';
+import { ZaidLogo } from '@/src/features/auth/components/AuthShared';
 
 type OtpVerificationPageProps = {
   isCompactHeight: boolean;
@@ -30,7 +30,7 @@ export function OtpVerificationPage({
 
   return (
     <View className="flex-1 items-center">
-      <GoogleMark />
+      <ZaidLogo size="small" />
       <Text className="mt-[26px] text-center text-[22px] font-semibold text-[#56575C]">
         OTP Verification
       </Text>

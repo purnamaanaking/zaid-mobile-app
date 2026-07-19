@@ -16,6 +16,7 @@ export type UserProfile = {
 let isAuthenticated = false;
 let user: UserProfile | null = null;
 let isInitialized = false;
+let authCheckPromise: Promise<boolean> | null = null;
 
 export const DEV_DEMO_TOKEN = 'dev-demo-token';
 export const DEV_DEMO_USER: UserProfile = {
@@ -55,6 +56,9 @@ export function useAuthStore() {
 }
 
 export async function checkAuth(): Promise<boolean> {
+  if (authCheckPromise) return authCheckPromise;
+
+  authCheckPromise = (async () => {
   try {
     const token = await getAuthToken();
     if (token) {
@@ -73,11 +77,11 @@ export async function checkAuth(): Promise<boolean> {
             email: res.data.email,
             full_name: res.data.full_name,
             avatar_url: res.data.avatar_url,
-            phone_number: res.data.phone_number,
+            phone_number: res.data.phone_number ?? undefined,
             phone_verified: res.data.phone_verified,
             status: res.data.status,
           };
-          isAuthenticated = true;
+          isAuthenticated = res.data.phone_verified === true;
         } else {
           isAuthenticated = false;
         }
@@ -98,23 +102,20 @@ export async function checkAuth(): Promise<boolean> {
     emit();
   }
   return isAuthenticated;
+  })();
+
+  try {
+    return await authCheckPromise;
+  } finally {
+    authCheckPromise = null;
+  }
 }
 
 export async function login(token?: string, userProfile?: UserProfile) {
-  try {
-    if (token) {
-      await setAuthToken(token);
-    } else {
-      throw new Error('Login requires a backend access token.');
-    }
-  } catch (e) {
-    console.warn('Could not save auth token to SecureStore', e);
-  }
+  if (!token) throw new Error('Login requires a backend access token.');
+  if (!userProfile) throw new Error('Login requires a backend user profile.');
 
-  if (!userProfile) {
-    throw new Error('Login requires a backend user profile.');
-  }
-
+  await setAuthToken(token);
   user = userProfile;
   isAuthenticated = true;
   emit();
@@ -122,10 +123,12 @@ export async function login(token?: string, userProfile?: UserProfile) {
 
 export async function logout() {
   try {
+    if (await getAuthToken()) {
+      await authApi.logout().catch((err) => {
+        console.warn('API logout endpoint call failed', err);
+      });
+    }
     await deleteAuthToken();
-    await authApi.logout().catch((err) => {
-      console.warn('API logout endpoint call failed', err);
-    });
   } catch (e) {
     console.warn('Could not clear auth token', e);
   }

@@ -13,10 +13,12 @@ import { buildCalendarDays, dateKey, formatSelectedDateLabel, shiftMonth } from 
 import {
   addPromptSchedule,
   deletePromptSchedule,
-  usePromptSchedules,
+  usePromptSchedulesState,
   fetchPromptSchedules,
 } from '@/src/features/schedule/store/promptScheduleStore';
 import { PromptSchedule } from '@/src/types/schedule.types';
+import { deleteEvent, fetchEvents, useEvents } from '@/src/features/events/store/eventStore';
+import { EventCard } from '@/src/features/events/components/EventCard';
 
 export function CalendarPage() {
   const today = useMemo(() => new Date(), []);
@@ -28,11 +30,18 @@ export function CalendarPage() {
   const [calendarSectionHeight, setCalendarSectionHeight] = useState(0);
   const [isSticky, setIsSticky] = useState(false);
   const [taskSheetVisible, setTaskSheetVisible] = useState(false);
-  const schedules = usePromptSchedules();
+  const { schedules, isLoading, error } = usePromptSchedulesState();
+  const { events } = useEvents();
 
   useEffect(() => {
     fetchPromptSchedules();
   }, []);
+
+  useEffect(() => {
+    const from = dateKey(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1));
+    const to = dateKey(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0));
+    void fetchEvents(from, to);
+  }, [monthDate]);
 
   const calendarDays = useMemo(() => buildCalendarDays(monthDate), [monthDate]);
 
@@ -80,6 +89,13 @@ export function CalendarPage() {
       return targetDate >= sStart && targetDate <= sEnd;
     });
   }, [activeFilter, schedules, startDate, endDate, today]);
+
+  const visibleEvents = useMemo(() => events.filter((event) => {
+    const eventDate = event.starts_at?.slice(0, 10);
+    if (!eventDate) return false;
+    if (startDate && endDate) return eventDate >= startDate && eventDate <= endDate;
+    return eventDate === (startDate || dateKey(today));
+  }), [endDate, events, startDate, today]);
 
   const selectedDateLabel = useMemo(() => {
     return startDate ? formatSelectedDateLabel(startDate, endDate) : formatSelectedDateLabel(dateKey(today));
@@ -196,7 +212,14 @@ export function CalendarPage() {
 
           {/* ── [2] Schedule cards ──────────────────────────────────── */}
           <View style={styles.scheduleList}>
-            {visibleSchedules.length > 0 ? (
+            {isLoading ? (
+              <View style={styles.emptyCard}><Text style={styles.emptyText}>Memuat kalender…</Text></View>
+            ) : error ? (
+              <View style={styles.emptyCard}>
+                <Text accessibilityRole="alert" style={styles.emptyTitle}>Kalender gagal dimuat</Text>
+                <Text onPress={() => void fetchPromptSchedules()} style={styles.emptyText}>{error} Tekan untuk mencoba lagi.</Text>
+              </View>
+            ) : visibleSchedules.length > 0 ? (
               visibleSchedules.map((schedule) => (
                 <CalendarScheduleCard
                   isEditing={editingScheduleId === schedule.id}
@@ -214,6 +237,14 @@ export function CalendarPage() {
                 </Text>
               </View>
             )}
+            {visibleEvents.length ? (
+              <View style={styles.eventList}>
+                <Text style={styles.eventHeading}>Events</Text>
+                {visibleEvents.map((event) => (
+                  <EventCard event={event} key={event.id} onDelete={() => void deleteEvent(event.id)} />
+                ))}
+              </View>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -260,6 +291,15 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontSize: 16,
     fontWeight: '600',
+  },
+  eventHeading: {
+    color: '#111827',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  eventList: {
+    marginTop: 20,
   },
   safeArea: {
     backgroundColor: '#FFFFFF',

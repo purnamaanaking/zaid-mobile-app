@@ -5,6 +5,8 @@ import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import { formatShortMonth } from '@/src/features/calendar/utils/date';
 import { PromptSchedule } from '@/src/types/schedule.types';
 import { updatePromptSchedule } from '@/src/features/schedule/store/promptScheduleStore';
+import { ReminderFields } from '@/src/features/reminders/components/ReminderFields';
+import { ReminderChannel } from '@/src/services/api/reminder.api';
 
 type CalendarScheduleCardProps = {
   isEditing: boolean;
@@ -33,6 +35,9 @@ export function CalendarScheduleCard({
   const [draftDate, setDraftDate] = useState(schedule.date);
   const [draftTime, setDraftTime] = useState(schedule.time);
   const [draftEndTime, setDraftEndTime] = useState(schedule.endTime || '');
+  const [reminderEnabled, setReminderEnabled] = useState(schedule.reminderEnabled ?? false);
+  const [reminderMinutes, setReminderMinutes] = useState(schedule.reminderMinutes || 30);
+  const [reminderChannel, setReminderChannel] = useState<ReminderChannel>(schedule.reminderChannel ?? 'whatsapp');
 
   // sync draft ketika isEditing berubah dari luar
   useEffect(() => {
@@ -42,6 +47,9 @@ export function CalendarScheduleCard({
       setDraftDate(schedule.date);
       setDraftTime(schedule.time);
       setDraftEndTime(schedule.endTime || '');
+      setReminderEnabled(schedule.reminderEnabled ?? false);
+      setReminderMinutes(schedule.reminderMinutes || 30);
+      setReminderChannel(schedule.reminderChannel ?? 'whatsapp');
     }
   }, [isEditing, schedule]);
 
@@ -79,6 +87,9 @@ export function CalendarScheduleCard({
       date: draftDate,
       time: draftTime,
       endTime: draftEndTime,
+      reminderEnabled,
+      reminderMinutes,
+      reminderChannel,
     });
     onEdit(); // tutup editing
   };
@@ -264,6 +275,15 @@ export function CalendarScheduleCard({
               />
             </View>
           </View>
+
+          <ReminderFields
+            channel={reminderChannel}
+            enabled={reminderEnabled}
+            minutes={reminderMinutes}
+            onChangeChannel={setReminderChannel}
+            onChangeEnabled={setReminderEnabled}
+            onChangeMinutes={setReminderMinutes}
+          />
 
           <View style={styles.formActions}>
             <Pressable

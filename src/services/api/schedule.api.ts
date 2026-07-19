@@ -11,8 +11,8 @@ export type TaskResource = {
   id: string;
   title: string;
   description: string | null;
-  status: 'active' | 'completed';
-  scheduled_date: string; // YYYY-MM-DD
+  status: 'pending' | 'active' | 'completed' | 'cancelled';
+  scheduled_date: string | null; // YYYY-MM-DD
   scheduled_time: string | null; // HH:mm:ss
   timezone: string;
   all_day: boolean;
@@ -81,7 +81,7 @@ export type CreateTaskPayload = {
 export type UpdateTaskPayload = Partial<CreateTaskPayload>;
 
 export const scheduleApi = {
-  getTasks: async (params?: { date?: string; from?: string; to?: string; status?: string }) => {
+  getTasks: async (params?: { date?: string; from?: string; to?: string; status?: string; include_completed?: boolean; search?: string }) => {
     const { data } = await apiClient.get<FetchTasksResponse>('/v1/tasks', {
       params,
     });

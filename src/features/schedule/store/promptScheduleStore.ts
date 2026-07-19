@@ -1,13 +1,12 @@
 import { useSyncExternalStore } from 'react';
 import { PromptSchedule } from '@/src/types/schedule.types';
-import { buildPromptSchedules } from '@/src/features/schedule/data/promptSchedules';
 import { scheduleApi } from '@/src/services/api/schedule.api';
-
-const mockSchedules = buildPromptSchedules(new Date());
+import { deleteReminder, fetchReminders, remindersForTask, reminderForTask, saveReminder, updateReminder } from '@/src/features/reminders/store/reminderStore';
 
 let schedules: PromptSchedule[] = [];
 let isLoading = false;
 let isLoaded = false;
+let error: string | null = null;
 
 const listeners = new Set<() => void>();
 
@@ -17,7 +16,9 @@ function emit() {
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 function normalizeApiTime(value?: string | null): string {
@@ -45,19 +46,22 @@ export function usePromptSchedulesState() {
   const currentSchedules = useSyncExternalStore(subscribe, () => schedules, () => schedules);
   const loading = useSyncExternalStore(subscribe, () => isLoading, () => isLoading);
   const loaded = useSyncExternalStore(subscribe, () => isLoaded, () => isLoaded);
+  const currentError = useSyncExternalStore(subscribe, () => error, () => error);
 
   return {
     schedules: currentSchedules,
     isLoading: loading,
     isLoaded: loaded,
+    error: currentError,
   };
 }
 
 export async function fetchPromptSchedules() {
   isLoading = true;
+  error = null;
   emit();
   try {
-    const res = await scheduleApi.getTasks();
+    const [res] = await Promise.all([scheduleApi.getTasks(), fetchReminders()]);
     if (res.success && res.data && res.data.items) {
       schedules = res.data.items.map((item) => {
         const time = normalizeApiTime(item.scheduled_time);
@@ -72,7 +76,10 @@ export async function fetchPromptSchedules() {
           endTime: addOneHour(time),
           location: 'Google Calendar & Tasks',
           description: item.description || '',
-          reminderMinutes: 30,
+          reminderMinutes: reminderForTask(item.id)?.minutes_before ?? 30,
+          reminderEnabled: Boolean(reminderForTask(item.id)),
+          reminderChannel: reminderForTask(item.id)?.channel ?? 'whatsapp',
+          reminderId: reminderForTask(item.id)?.id,
           status: item.status === 'completed' ? 'done' : 'active',
           recurring: item.recurrence?.type || 'none',
           sourcePrompt: item.description || '',
@@ -82,8 +89,9 @@ export async function fetchPromptSchedules() {
       });
     }
   } catch (err) {
-    console.warn('Failed to fetch tasks from REST API, falling back to local mocks', err);
-    schedules = mockSchedules;
+    console.warn('Failed to fetch tasks from REST API', err);
+    schedules = [];
+    error = 'Jadwal gagal dimuat. Periksa koneksi lalu coba lagi.';
   } finally {
     isLoading = false;
     isLoaded = true;
@@ -92,11 +100,11 @@ export async function fetchPromptSchedules() {
 }
 
 export async function addPromptSchedule(schedule: PromptSchedule) {
-  // 1. Optimistic update
+  const previous = schedules;
   schedules = [schedule, ...schedules];
+  error = null;
   emit();
 
-  // 2. Call API in the background
   try {
     const payload = {
       title: schedule.title,
@@ -108,31 +116,43 @@ export async function addPromptSchedule(schedule: PromptSchedule) {
         ? { type: schedule.recurring, interval: 1 }
         : null,
     };
-    await scheduleApi.createTask(payload);
-    // Refetch to sync IDs and database properties
-    fetchPromptSchedules();
+    const created = await scheduleApi.createTask(payload);
+    if (schedule.reminderEnabled) {
+      await saveReminder({
+        task_id: created.data.task.id,
+        minutes_before: schedule.reminderMinutes,
+        channel: schedule.reminderChannel ?? 'whatsapp',
+      });
+    }
+    await fetchPromptSchedules();
   } catch (err) {
-    console.warn('Failed to store task on backend API', err);
+    schedules = previous;
+    error = 'Jadwal gagal disimpan.';
+    emit();
+    throw err;
   }
 }
 
 export async function deletePromptSchedule(scheduleId: string) {
-  // 1. Optimistic update
+  const previous = schedules;
   schedules = schedules.filter((schedule) => schedule.id !== scheduleId);
+  error = null;
   emit();
 
-  // 2. Call API
   try {
-    if (!scheduleId.startsWith('mock-') && !scheduleId.startsWith('ai-')) {
-      await scheduleApi.deleteTask(scheduleId);
-    }
+    const taskReminders = remindersForTask(scheduleId);
+    for (const reminder of taskReminders) await deleteReminder(reminder.id);
+    await scheduleApi.deleteTask(scheduleId);
   } catch (err) {
-    console.warn('Failed to delete task from backend API', err);
+    schedules = previous;
+    error = 'Jadwal gagal dihapus.';
+    emit();
+    throw err;
   }
 }
 
 export async function updatePromptSchedule(scheduleId: string, patch: Partial<PromptSchedule>) {
-  // 1. Optimistic update
+  const previous = schedules;
   schedules = schedules.map((schedule) =>
     schedule.id === scheduleId
       ? { ...schedule, ...patch, updatedAt: new Date().toISOString() }
@@ -140,18 +160,30 @@ export async function updatePromptSchedule(scheduleId: string, patch: Partial<Pr
   );
   emit();
 
-  // 2. Call API
   try {
-    if (!scheduleId.startsWith('mock-') && !scheduleId.startsWith('ai-')) {
-      const payload = {
-        title: patch.title,
-        description: patch.description,
-        scheduled_date: patch.date,
-        scheduled_time: toApiTime(patch.time),
+    const payload = {
+      title: patch.title,
+      description: patch.description,
+      scheduled_date: patch.date,
+      scheduled_time: toApiTime(patch.time),
+    };
+    await scheduleApi.updateTask(scheduleId, payload);
+    const existingReminder = reminderForTask(scheduleId);
+    const nextSchedule = schedules.find((item) => item.id === scheduleId);
+    if (nextSchedule?.reminderEnabled) {
+      const reminderPayload = {
+        minutes_before: nextSchedule.reminderMinutes,
+        channel: nextSchedule.reminderChannel ?? 'whatsapp' as const,
       };
-      await scheduleApi.updateTask(scheduleId, payload);
+      if (existingReminder) await updateReminder(existingReminder.id, reminderPayload);
+      else await saveReminder({ task_id: scheduleId, ...reminderPayload });
+    } else if (existingReminder) {
+      await deleteReminder(existingReminder.id);
     }
   } catch (err) {
-    console.warn('Failed to update task on backend API', err);
+    schedules = previous;
+    error = 'Jadwal gagal diperbarui.';
+    emit();
+    throw err;
   }
 }

@@ -29,6 +29,16 @@ export type GoogleLoginResponse = {
   };
 };
 
+export type OnboardingStatusResponse = {
+  success: boolean;
+  data: {
+    user_status: string;
+    phone_verified: boolean;
+    required: boolean;
+    next_step: 'dashboard' | 'verify_otp' | 'phone_input';
+  };
+};
+
 export type PhoneResponse = {
   success: boolean;
   message: string;
@@ -64,8 +74,8 @@ export type ProfileResponse = {
     id: string;
     email: string;
     full_name: string;
-    avatar_url: string;
-    phone_number: string;
+    avatar_url: string | null;
+    phone_number: string | null;
     phone_verified: boolean;
     status: string;
   };
@@ -112,6 +122,32 @@ export const authApi = {
 
   getProfile: async () => {
     const { data } = await apiClient.get<ProfileResponse>('/v1/me');
+    return data;
+  },
+
+  getOnboardingStatus: async () => {
+    const { data } = await apiClient.get<OnboardingStatusResponse>('/v1/onboarding/status');
+    return data;
+  },
+
+  updateProfile: async (payload: { full_name?: string; avatar_url?: string | null }) => {
+    const { data } = await apiClient.patch<ProfileResponse>('/v1/me', payload);
+    return data;
+  },
+
+  getSettings: async () => {
+    const { data } = await apiClient.get('/v1/settings');
+    return data;
+  },
+
+  updateSettings: async (payload: {
+    theme?: 'light' | 'dark';
+    timezone?: string;
+    default_task_time?: string;
+    reminder_offset_minutes?: number;
+    reminder_enabled?: boolean;
+  }) => {
+    const { data } = await apiClient.patch('/v1/settings', payload);
     return data;
   },
 

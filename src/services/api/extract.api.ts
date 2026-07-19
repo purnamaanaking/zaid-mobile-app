@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 
 export type PromptAttachment = {
-  type: 'document' | 'image';
+  type: 'image' | 'audio_transcription';
   url: string | null;
   text?: string | null;
 };

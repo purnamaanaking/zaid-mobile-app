@@ -1,3 +1,5 @@
+import type { ReminderChannel } from '@/src/services/api/reminder.api';
+
 export type ScheduleStatus = 'active' | 'done';
 
 export type Schedule = {
@@ -19,4 +21,7 @@ export type PromptSchedule = Schedule & {
   endTime: string;
   recurring?: 'none' | 'daily' | 'weekly' | 'monthly';
   sourcePrompt: string;
+  reminderEnabled?: boolean;
+  reminderChannel?: ReminderChannel;
+  reminderId?: string;
 };

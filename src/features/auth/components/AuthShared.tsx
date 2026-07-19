@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Image, ScrollView, Text, View, Platform, KeyboardAvoidingView, Keyboard } from 'react-native';
 
-const ZAID_LOGO = require('@/src/components/image/logo-zaid.png');
+const ZAID_LOGO = require('@/assets/brand/zaid-logo.png');
 
 export type AuthLayoutMetrics = {
   horizontalPadding: number;
@@ -63,7 +63,7 @@ export function BrandHeader() {
   return (
     <View className="flex-row items-center justify-center gap-1.5 pt-[18px]">
       <ZaidLogo size="small" />
-      <Text className="text-[23px] font-semibold text-black">ZAID.</Text>
+      <Text className="text-[23px] font-semibold text-black">ZAID</Text>
     </View>
   );
 }

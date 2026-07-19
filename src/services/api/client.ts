@@ -1,9 +1,9 @@
-import axios from 'axios';
+import { create as createAxiosClient } from 'axios';
 import { deleteAuthToken, getAuthToken } from '@/src/services/storage/token';
 
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://zaid-assist.my.id/api';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://zaidassistant.id/api';
 
-export const apiClient = axios.create({
+export const apiClient = createAxiosClient({
   baseURL: API_BASE_URL,
   timeout: 15000,
   headers: {
@@ -22,15 +22,7 @@ export const addUnauthorizedListener = (listener: UnauthorizedListener) => {
   };
 };
 
-const emitUnauthorized = () => {
-  unauthorizedListeners.forEach((listener) => {
-    try {
-      listener();
-    } catch (e) {
-      console.error('Error in unauthorized listener', e);
-    }
-  });
-};
+const emitUnauthorized = () => unauthorizedListeners.forEach((listener) => listener());
 
 // Request interceptor to attach JWT token
 apiClient.interceptors.request.use(

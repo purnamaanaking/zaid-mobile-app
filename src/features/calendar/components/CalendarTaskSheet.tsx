@@ -15,6 +15,8 @@ import {
 import { CalendarScheduleCard } from '@/src/features/calendar/components/CalendarScheduleCard';
 import { formatFullDate } from '@/src/features/calendar/utils/date';
 import { PromptSchedule } from '@/src/types/schedule.types';
+import { ReminderFields } from '@/src/features/reminders/components/ReminderFields';
+import { ReminderChannel } from '@/src/services/api/reminder.api';
 
 type CalendarTaskSheetProps = {
   editingScheduleId: string | null;
@@ -46,6 +48,9 @@ export function CalendarTaskSheet({
   const [draftTime, setDraftTime] = useState('09:00');
   const [draftEndTime, setDraftEndTime] = useState('10:00');
   const [draftDescription, setDraftDescription] = useState('');
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderMinutes, setReminderMinutes] = useState(30);
+  const [reminderChannel, setReminderChannel] = useState<ReminderChannel>('whatsapp');
 
   const title = useMemo(() => {
     if (!startDate) return 'Selected tasks';
@@ -117,7 +122,9 @@ export function CalendarTaskSheet({
       endTime: draftEndTime || '10:00',
       location: 'Manual Schedule',
       description: draftDescription.trim(),
-      reminderMinutes: 30,
+      reminderMinutes,
+      reminderEnabled,
+      reminderChannel,
       status: 'active',
       recurring: 'none',
       sourcePrompt: 'Manual entry',
@@ -130,6 +137,9 @@ export function CalendarTaskSheet({
     setDraftTime('09:00');
     setDraftEndTime('10:00');
     setDraftDescription('');
+    setReminderEnabled(false);
+    setReminderMinutes(30);
+    setReminderChannel('whatsapp');
     setAdding(false);
   }
 
@@ -231,6 +241,15 @@ export function CalendarTaskSheet({
                     value={draftDescription}
                   />
                 </View>
+
+                <ReminderFields
+                  channel={reminderChannel}
+                  enabled={reminderEnabled}
+                  minutes={reminderMinutes}
+                  onChangeChannel={setReminderChannel}
+                  onChangeEnabled={setReminderEnabled}
+                  onChangeMinutes={setReminderMinutes}
+                />
 
                 <View style={styles.formActions}>
                   <Pressable

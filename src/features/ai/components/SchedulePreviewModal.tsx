@@ -4,6 +4,7 @@ import { Modal, Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingVi
 
 import { RecurringOption } from '@/src/features/ai/types';
 import { PromptSchedule } from '@/src/types/schedule.types';
+import { ReminderFields } from '@/src/features/reminders/components/ReminderFields';
 
 const RECURRING_OPTIONS: { label: string; value: RecurringOption }[] = [
   { label: 'No Repeat', value: 'none' },
@@ -142,6 +143,15 @@ export function SchedulePreviewModal({
                 value={schedule.description ?? ''}
                 placeholder="Write description notes..."
                 inputStyle={styles.multilineInput}
+              />
+
+              <ReminderFields
+                channel={schedule.reminderChannel ?? 'whatsapp'}
+                enabled={schedule.reminderEnabled ?? false}
+                minutes={schedule.reminderMinutes}
+                onChangeChannel={(reminderChannel) => onChangeSchedule({ reminderChannel })}
+                onChangeEnabled={(reminderEnabled) => onChangeSchedule({ reminderEnabled })}
+                onChangeMinutes={(reminderMinutes) => onChangeSchedule({ reminderMinutes })}
               />
 
               {/* Recurring Section */}

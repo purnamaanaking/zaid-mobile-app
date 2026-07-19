@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
-import { GoogleMark } from '@/src/features/auth/components/AuthShared';
+import { GoogleMark, ZaidLogo } from '@/src/features/auth/components/AuthShared';
 import { addGoogleWebCredentialListener, renderGoogleWebButton } from '@/src/services/auth/googleAuth';
 
 type AuthPageProps = {
@@ -41,7 +41,7 @@ export function AuthPage({ isCompactHeight, onDemoSignIn, onGoogleCredential, on
       <View
         className="items-center justify-center rounded-[28px] bg-[#F6F4FF]"
         style={{ height: isCompactHeight ? 70 : 82, width: isCompactHeight ? 70 : 82 }}>
-        <GoogleMark />
+        <ZaidLogo size="small" />
       </View>
 
       <Text className="mt-6 text-center text-[24px] font-semibold text-[#303244]">
