@@ -18,16 +18,6 @@ let user: UserProfile | null = null;
 let isInitialized = false;
 let authCheckPromise: Promise<boolean> | null = null;
 
-export const DEV_DEMO_TOKEN = 'dev-demo-token';
-export const DEV_DEMO_USER: UserProfile = {
-  id: 'dev-demo-user',
-  email: 'demo@zaid.local',
-  full_name: 'ZAID Demo User',
-  avatar_url: null,
-  phone_verified: true,
-  status: 'active',
-};
-
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -62,12 +52,6 @@ export async function checkAuth(): Promise<boolean> {
   try {
     const token = await getAuthToken();
     if (token) {
-      if (__DEV__ && token === DEV_DEMO_TOKEN) {
-        user = DEV_DEMO_USER;
-        isAuthenticated = true;
-        return true;
-      }
-
       // Try to load real profile from backend
       try {
         const res = await authApi.getProfile();

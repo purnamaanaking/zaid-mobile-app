@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
 import { GoogleMark, ZaidLogo } from '@/src/features/auth/components/AuthShared';
@@ -7,14 +7,13 @@ import { addGoogleWebCredentialListener, renderGoogleWebButton } from '@/src/ser
 
 type AuthPageProps = {
   isCompactHeight: boolean;
-  onDemoSignIn?: () => void;
   onGoogleCredential?: (idToken: string) => void;
   onGoogleSignIn: () => void;
 };
 
 const WEB_GOOGLE_BUTTON_ID = 'zaid-google-signin-button';
 
-export function AuthPage({ isCompactHeight, onDemoSignIn, onGoogleCredential, onGoogleSignIn }: AuthPageProps) {
+export function AuthPage({ isCompactHeight, onGoogleCredential, onGoogleSignIn }: AuthPageProps) {
   const [webButtonReady, setWebButtonReady] = useState(false);
 
   useEffect(() => {
@@ -89,23 +88,9 @@ export function AuthPage({ isCompactHeight, onDemoSignIn, onGoogleCredential, on
         )}
       </View>
 
-      {__DEV__ && onDemoSignIn && (
-        <Button
-          accessibilityLabel="Continue with demo account"
-          className="mt-4 w-full max-w-[340px] self-stretch rounded-full"
-          onPress={onDemoSignIn}
-          textClassName="font-semibold text-white">
-          Continue as Demo
-        </Button>
-      )}
-
-      <Pressable accessibilityRole="text" className="mt-5 max-w-[300px]">
-        <Text className="text-center text-[12px] leading-[18px] text-[#9CA1B5]">
-          {__DEV__
-            ? 'Development demo bypass is enabled locally. Google authentication is still required in production.'
-            : 'No demo bypass available. Your account must be authenticated by Google before onboarding.'}
-        </Text>
-      </Pressable>
+      <Text className="mt-5 max-w-[300px] text-center text-[12px] leading-[18px] text-[#9CA1B5]">
+        Sign in with Google to continue to phone verification.
+      </Text>
     </View>
   );
 }

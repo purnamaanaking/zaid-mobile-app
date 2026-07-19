@@ -36,9 +36,7 @@ try {
   // Package not installed yet by developer
 }
 
-export const GOOGLE_WEB_CLIENT_ID =
-  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-  '415497871679-kkjd4tuniojn2jgjbn6pavhjr4p2kf4t.apps.googleusercontent.com';
+export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 
 let webGoogleScriptPromise: Promise<void> | null = null;
 let pendingWebResolve: ((idToken: string | null) => void) | null = null;
@@ -92,7 +90,12 @@ export const initGoogleAuth = () => {
   }
 
   if (!GoogleSignin) {
-    console.log('[GoogleAuth] Native package is not installed. Running in mock bypass mode.');
+    console.error('[GoogleAuth] Native module is unavailable. Rebuild the development app.');
+    return;
+  }
+
+  if (!GOOGLE_WEB_CLIENT_ID) {
+    console.error('[GoogleAuth] EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID is missing.');
     return;
   }
 
@@ -175,6 +178,10 @@ async function signInWithGoogleWeb(): Promise<string | null> {
 }
 
 export const signInWithGoogle = async (): Promise<string | null> => {
+  if (!GOOGLE_WEB_CLIENT_ID) {
+    throw new Error('Google Sign-In is not configured. Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID and rebuild the app.');
+  }
+
   if (Platform.OS === 'web') {
     return signInWithGoogleWeb();
   }
