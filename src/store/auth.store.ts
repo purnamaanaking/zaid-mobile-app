@@ -1,5 +1,13 @@
 import { useSyncExternalStore } from 'react';
-import { deleteAuthToken, getAuthToken, setAuthToken } from '@/src/services/storage/token';
+import {
+  deleteAuthToken,
+  deleteDeveloperAuthSession,
+  getAuthToken,
+  getDeveloperAuthSession,
+  setAuthToken,
+  setDeveloperAuthSession,
+} from '@/src/services/storage/token';
+import { Config } from '@/src/constants/config';
 import { authApi } from '@/src/services/api/auth.api';
 
 export type UserProfile = {
@@ -17,6 +25,15 @@ let isAuthenticated = false;
 let user: UserProfile | null = null;
 let isInitialized = false;
 let authCheckPromise: Promise<boolean> | null = null;
+
+const developerUser: UserProfile = {
+  id: 'developer-user',
+  email: 'developer@zaid.local',
+  full_name: 'Developer Preview',
+  phone_number: '+620000000000',
+  phone_verified: true,
+  status: 'active',
+};
 
 const listeners = new Set<() => void>();
 
@@ -39,6 +56,7 @@ export function useAuthStore() {
     user: currentUser,
     isInitialized: initialized,
     login,
+    loginAsDeveloper,
     logout,
     checkAuth,
     setProfile,
@@ -50,6 +68,21 @@ export async function checkAuth(): Promise<boolean> {
 
   authCheckPromise = (async () => {
   try {
+    if (Config.useLocalUiData) {
+      await deleteAuthToken();
+      await setDeveloperAuthSession();
+      user = developerUser;
+      isAuthenticated = true;
+      return true;
+    }
+
+    if (await getDeveloperAuthSession()) {
+      await deleteAuthToken();
+      user = developerUser;
+      isAuthenticated = true;
+      return true;
+    }
+
     const token = await getAuthToken();
     if (token) {
       // Try to load real profile from backend
@@ -99,20 +132,39 @@ export async function login(token?: string, userProfile?: UserProfile) {
   if (!token) throw new Error('Login requires a backend access token.');
   if (!userProfile) throw new Error('Login requires a backend user profile.');
 
+  await deleteDeveloperAuthSession();
   await setAuthToken(token);
   user = userProfile;
   isAuthenticated = true;
   emit();
 }
 
+export async function loginAsDeveloper() {
+  await deleteAuthToken();
+  await setDeveloperAuthSession();
+  user = developerUser;
+  isAuthenticated = true;
+  emit();
+}
+
 export async function logout() {
   try {
+    if (Config.useLocalUiData) {
+      await deleteAuthToken();
+      await setDeveloperAuthSession();
+      user = developerUser;
+      isAuthenticated = true;
+      emit();
+      return;
+    }
+
     if (await getAuthToken()) {
       await authApi.logout().catch((err) => {
         console.warn('API logout endpoint call failed', err);
       });
     }
     await deleteAuthToken();
+    await deleteDeveloperAuthSession();
   } catch (e) {
     console.warn('Could not clear auth token', e);
   }

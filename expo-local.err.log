@@ -1,0 +1,4 @@
+Failed to construct transformer:  Error: Failed to start watch mode.
+    at Timeout._onTimeout (C:\Project\Code\zaid-mobile-app\node_modules\metro-file-map\src\Watcher.js:161:24)
+    at listOnTimeout (node:internal/timers:581:17)
+    at processTimers (node:internal/timers:519:7)

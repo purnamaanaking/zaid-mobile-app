@@ -1,5 +1,5 @@
 import { create as createAxiosClient } from 'axios';
-import { deleteAuthToken, getAuthToken } from '@/src/services/storage/token';
+import { deleteAuthToken, getAuthToken, getDeveloperAuthSession } from '@/src/services/storage/token';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://zaidassistant.id/api';
 
@@ -28,6 +28,10 @@ const emitUnauthorized = () => unauthorizedListeners.forEach((listener) => liste
 apiClient.interceptors.request.use(
   async (config) => {
     try {
+      if (await getDeveloperAuthSession()) {
+        return config;
+      }
+
       const token = await getAuthToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -47,6 +51,10 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
+      if (await getDeveloperAuthSession()) {
+        return Promise.reject(error);
+      }
+
       try {
         await deleteAuthToken();
       } catch (e) {

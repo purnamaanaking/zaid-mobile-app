@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AiPromptComposer } from '@/src/features/ai/components/AiPromptComposer';
 import { SchedulePreviewModal } from '@/src/features/ai/components/SchedulePreviewModal';
+import { Config } from '@/src/constants/config';
 import { Fonts } from '@/src/constants/typography';
 import { addPromptSchedule, fetchPromptSchedules } from '@/src/features/schedule/store/promptScheduleStore';
 import { extractApi, PromptAttachment } from '@/src/services/api/extract.api';
@@ -70,6 +71,92 @@ function normalizeApiTime(value?: string | null): string {
 function addOneHour(time: string): string {
   const [h, m] = normalizeApiTime(time).split(':').map(Number);
   return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(date.getDate() + days);
+  return next;
+}
+
+function parseLocalDate(text: string): string {
+  const lower = text.toLowerCase();
+  const now = new Date();
+  const isoMatch = lower.match(/\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+
+  const slashMatch = lower.match(/\b(\d{1,2})[/-](\d{1,2})(?:[/-](20\d{2}))?\b/);
+  if (slashMatch) {
+    const [, day, month, year] = slashMatch;
+    return `${year || now.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+
+  if (/\blusa\b|day after tomorrow/.test(lower)) return dateKey(addDays(now, 2));
+  if (/\bbesok\b|tomorrow/.test(lower)) return dateKey(addDays(now, 1));
+  if (/minggu depan|next week/.test(lower)) return dateKey(addDays(now, 7));
+  return dateKey(now);
+}
+
+function parseLocalTime(text: string): string {
+  const lower = text.toLowerCase();
+  const match = lower.match(/\b(?:jam|pukul|at)?\s*(\d{1,2})(?:[:.](\d{2}))?\s*(pagi|siang|sore|malam|am|pm)?\b/);
+  if (!match) return '09:00';
+
+  let hour = Number(match[1]);
+  const minute = match[2] || '00';
+  const period = match[3];
+
+  if ((period === 'malam' || period === 'sore' || period === 'pm') && hour < 12) hour += 12;
+  if (period === 'pagi' && hour === 12) hour = 0;
+  if (period === 'siang' && hour < 11) hour += 12;
+
+  return `${String(hour % 24).padStart(2, '0')}:${minute}`;
+}
+
+function parseLocalReminderMinutes(text: string): number {
+  const lower = text.toLowerCase();
+  const match = lower.match(/(?:ingatkan|reminder|remind).*?(\d+)\s*(menit|minute|minutes|jam|hour|hours|hari|day|days)/);
+  if (!match) return 30;
+
+  const value = Number(match[1]);
+  const unit = match[2];
+  if (/hari|day/.test(unit)) return value * 1440;
+  if (/jam|hour/.test(unit)) return value * 60;
+  return value;
+}
+
+function parseLocalSchedule(text: string, currentAttachments: PromptAttachment[] | null): ParsedSchedule {
+  const now = new Date();
+  const scheduledTime = parseLocalTime(text);
+  const task = {
+    id: `local-ai-${now.getTime()}`,
+    title: parseTitle(text),
+    description: currentAttachments?.length
+      ? `${text}\n\nLampiran lokal disertakan untuk simulasi UI.`
+      : text,
+    scheduled_date: parseLocalDate(text),
+    scheduled_time: scheduledTime,
+    reminder_minutes_before: /ingatkan|reminder|remind/i.test(text) ? parseLocalReminderMinutes(text) : 30,
+    reminder_channel: 'app',
+    recurrence: /mingguan|weekly|setiap minggu/i.test(text)
+      ? { type: 'weekly' }
+      : /harian|daily|setiap hari/i.test(text)
+        ? { type: 'daily' }
+        : /bulanan|monthly|setiap bulan/i.test(text)
+          ? { type: 'monthly' }
+          : null,
+    status: 'active',
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  };
+
+  return {
+    schedule: taskToSchedule(task, text),
+    backendSaved: false,
+  };
 }
 
 function taskToSchedule(task: any, sourcePrompt: string): PromptSchedule {
@@ -212,6 +299,8 @@ export function AiPromptPage() {
   }
 
   async function parseSchedule(text: string, currentAttachments: PromptAttachment[] | null) {
+    if (Config.useLocalUiData) return parseLocalSchedule(text, currentAttachments);
+
     const res = await extractApi.processPrompt(text, currentAttachments);
 
     if (res.success && res.data) {
@@ -304,6 +393,16 @@ export function AiPromptPage() {
         return;
       }
 
+      if (Config.useLocalUiData) {
+        setAttachedFile({ name: asset.name, type: asset.mimeType || 'document' });
+        setAttachments([{
+          type: 'image',
+          url: asset.uri,
+          text: `Local file: ${asset.name}`,
+        }]);
+        return;
+      }
+
       setIsProcessing(true);
 
       try {
@@ -340,12 +439,14 @@ export function AiPromptPage() {
     if (!preview) return;
 
     try {
-      if (pendingPromptRequestId) {
+      if (pendingPromptRequestId && !Config.useLocalUiData) {
         const confirmation = await extractApi.confirmPrompt(pendingPromptRequestId, true);
         if (!confirmation.success || !confirmation.data?.result) {
           throw new Error(confirmation.data?.human_response || 'Konfirmasi prompt gagal.');
         }
-      } else if (!previewAlreadySaved) {
+      }
+
+      if (!previewAlreadySaved) {
         await addPromptSchedule(preview);
       } else {
         await fetchPromptSchedules();

@@ -1,19 +1,27 @@
 import { useEffect, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
-import { GoogleMark, ZaidLogo } from '@/src/features/auth/components/AuthShared';
+import { GoogleMark } from '@/src/features/auth/components/AuthShared';
 import { addGoogleWebCredentialListener, renderGoogleWebButton } from '@/src/services/auth/googleAuth';
 
 type AuthPageProps = {
+  enableDeveloperSignIn?: boolean;
   isCompactHeight: boolean;
+  onDeveloperSignIn?: () => void;
   onGoogleCredential?: (idToken: string) => void;
   onGoogleSignIn: () => void;
 };
 
 const WEB_GOOGLE_BUTTON_ID = 'zaid-google-signin-button';
 
-export function AuthPage({ isCompactHeight, onGoogleCredential, onGoogleSignIn }: AuthPageProps) {
+export function AuthPage({
+  enableDeveloperSignIn = false,
+  isCompactHeight,
+  onDeveloperSignIn,
+  onGoogleCredential,
+  onGoogleSignIn,
+}: AuthPageProps) {
   const [webButtonReady, setWebButtonReady] = useState(false);
 
   useEffect(() => {
@@ -36,61 +44,76 @@ export function AuthPage({ isCompactHeight, onGoogleCredential, onGoogleSignIn }
   }, [onGoogleCredential]);
 
   return (
-    <View className="flex-1 items-center px-1">
-      <View
-        className="items-center justify-center rounded-[28px] bg-[#F6F4FF]"
-        style={{ height: isCompactHeight ? 70 : 82, width: isCompactHeight ? 70 : 82 }}>
-        <ZaidLogo size="small" />
-      </View>
-
-      <Text className="mt-6 text-center text-[24px] font-semibold text-[#303244]">
-        Continue with Google
-      </Text>
-      <Text className="mt-3 max-w-[280px] text-center text-[14px] leading-[21px] text-[#707386]">
-        Choose your Google account first. Phone verification is locked until Google sign-in succeeds.
-      </Text>
-
-      <View className="mt-8 w-full max-w-[340px]">
+    <View style={styles.container}>
+      <View style={[styles.loginContent, { paddingTop: isCompactHeight ? 88 : 126 }]}>
+        <GoogleMark />
+        <Text style={styles.googleCopy}>
+          We Are Integrated with Google Account,{'\n'}Also login with Google Account
+        </Text>
         {Platform.OS === 'web' ? (
-          <>
+          <View style={styles.webButtonSlot}>
             <div
               id={WEB_GOOGLE_BUTTON_ID}
               style={{
-                alignItems: 'center',
-                display: 'flex',
-                justifyContent: 'center',
-                minHeight: 44,
-                width: '100%',
+                display: webButtonReady ? 'none' : 'block',
+                height: 0,
+                overflow: 'hidden',
+                width: 0,
               }}
             />
-            {!webButtonReady && (
-              <Button
-                accessibilityLabel="Continue with Google"
-                className="self-stretch rounded-full"
-                leftIcon={<GoogleMark small />}
-                onPress={onGoogleSignIn}
-                textClassName="font-semibold text-[#56575C]"
-                variant="outline">
-                Open Google Sign-In
-              </Button>
-            )}
-          </>
+          </View>
         ) : (
-          <Button
-            accessibilityLabel="Continue with Google"
-            className="self-stretch rounded-full"
-            leftIcon={<GoogleMark small />}
-            onPress={onGoogleSignIn}
-            textClassName="font-semibold text-[#56575C]"
-            variant="outline">
-            Sign in with Google
-          </Button>
+          null
         )}
       </View>
 
-      <Text className="mt-5 max-w-[300px] text-center text-[12px] leading-[18px] text-[#9CA1B5]">
-        Sign in with Google to continue to phone verification.
-      </Text>
+      <Button
+        accessibilityLabel="Login with Google"
+        className="self-stretch"
+        onPress={onGoogleSignIn}>
+        Log In
+      </Button>
+      {enableDeveloperSignIn ? (
+        <>
+          <Button
+            accessibilityLabel="Developer sign in"
+            className="mt-3 self-stretch"
+            onPress={onDeveloperSignIn}
+            textClassName="text-[#6268FF]"
+            variant="ghost">
+            Developer Sign In
+          </Button>
+          <Text style={styles.developerCopy}>Preview the app without Google authentication.</Text>
+        </>
+      ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  googleCopy: {
+    color: '#98A1B8',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 31,
+    textAlign: 'center',
+  },
+  developerCopy: {
+    color: '#98A1B8',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  loginContent: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  webButtonSlot: {
+    height: 0,
+    width: 0,
+  },
+});

@@ -1,0 +1,11 @@
+
+> zaid-mobile-app@1.0.0 start
+> expo start --dev-client --localhost
+
+env: load .env
+env: export EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID EXPO_PUBLIC_ENABLE_DEV_SIGN_IN EXPO_PUBLIC_USE_LOCAL_UI_DATA EXPO_PUBLIC_API_URL
+Starting project at C:\Project\Code\zaid-mobile-app
+React Compiler enabled
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.

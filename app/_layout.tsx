@@ -6,6 +6,7 @@ import {
 } from '@expo-google-fonts/poppins';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Redirect, Stack, router, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AppState, Text, TextInput, TextInputProps, TextProps } from 'react-native';
@@ -18,6 +19,8 @@ import { addUnauthorizedListener } from '@/src/services/api/client';
 import { addNotificationResponseListener, configureNativeNotifications } from '@/src/services/notifications/nativeNotifications';
 import { fetchReminders } from '@/src/features/reminders/store/reminderStore';
 import { checkAuth, logout, useAuthStore } from '@/src/store/auth.store';
+
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -49,6 +52,12 @@ export default function RootLayout() {
   const segments = useSegments();
 
   useEffect(() => {
+    if (fontsLoaded && isInitialized) {
+      void SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, isInitialized]);
+
+  useEffect(() => {
     checkAuth();
     void configureNativeNotifications(false);
     void fetchReminders();
@@ -72,7 +81,7 @@ export default function RootLayout() {
   }
 
   const inAuthGroup = segments[0] === '(auth)';
-  if (!isAuthenticated && !inAuthGroup) return <Redirect href={{ pathname: '/(auth)/index' } as never} />;
+  if (!isAuthenticated && !inAuthGroup) return <Redirect href="/(auth)/login" />;
   if (isAuthenticated && inAuthGroup) return <Redirect href="/(tabs)" />;
 
   return (

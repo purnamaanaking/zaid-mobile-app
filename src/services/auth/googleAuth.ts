@@ -36,7 +36,7 @@ try {
   // Package not installed yet by developer
 }
 
-export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
+export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '396707672761-9fjgd5ife1jhi9kof2kc19nkh4itnnf2.apps.googleusercontent.com';
 
 let webGoogleScriptPromise: Promise<void> | null = null;
 let pendingWebResolve: ((idToken: string | null) => void) | null = null;

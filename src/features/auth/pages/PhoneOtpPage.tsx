@@ -1,7 +1,7 @@
-import { Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
-import { ZaidLogo } from '@/src/features/auth/components/AuthShared';
+import { AuthSuccessNotice, GoogleMark } from '@/src/features/auth/components/AuthShared';
 
 type PhoneOtpPageProps = {
   errorMessage?: string;
@@ -10,6 +10,7 @@ type PhoneOtpPageProps = {
   onChangePhone: (phone: string) => void;
   onGetOtp: () => void;
   phone: string;
+  successMessage?: string;
 };
 
 export function PhoneOtpPage({
@@ -19,61 +20,101 @@ export function PhoneOtpPage({
   onChangePhone,
   onGetOtp,
   phone,
+  successMessage,
 }: PhoneOtpPageProps) {
   const isDisabled = isLoading || phone.replace(/\D/g, '').length < 8;
 
   return (
-    <View className="flex-1 items-center px-1">
-      <View
-        className="items-center justify-center rounded-[28px] bg-[#F6F4FF]"
-        style={{ height: isCompactHeight ? 70 : 82, width: isCompactHeight ? 70 : 82 }}>
-        <ZaidLogo size="small" />
-      </View>
+    <View style={styles.container}>
+      <View style={[styles.content, { paddingTop: isCompactHeight ? 58 : 58 }]}>
+        {successMessage ? <AuthSuccessNotice message={successMessage} /> : null}
+        <GoogleMark small />
+        <Text style={styles.title}>OTP Verification</Text>
+        <Text style={styles.copy}>
+          We will send you one-time password{'\n'}to you mobile number
+        </Text>
 
-      <Text className="mt-6 text-center text-[24px] font-semibold text-[#303244]">
-        Verify WhatsApp Number
-      </Text>
-      <Text className="mt-3 max-w-[300px] text-center text-[14px] leading-[21px] text-[#707386]">
-        Enter your active WhatsApp number. We will send a 6-digit OTP via WhatsApp, with email fallback.
-      </Text>
-
-      <View className="mt-8 w-full max-w-[340px]">
+        <View style={styles.inputWrap}>
         <TextInput
           accessibilityLabel="Enter WhatsApp number"
-          className="h-[56px] rounded-2xl border bg-white px-5 text-center text-base text-[#33333A]"
           keyboardType="phone-pad"
           maxLength={18}
           onChangeText={onChangePhone}
           onSubmitEditing={onGetOtp}
-          placeholder="081234567890"
+          placeholder="Enter Mobile Number"
           placeholderTextColor="#A6AEC4"
           returnKeyType="send"
-          style={{
-            borderColor: errorMessage ? '#EF4444' : '#D9DCE8',
-            includeFontPadding: false,
-            textAlignVertical: 'center',
-          }}
+          style={[styles.input, errorMessage ? styles.inputError : null]}
           value={phone}
         />
+        </View>
 
         {errorMessage ? (
-          <Text className="mt-3 rounded-2xl bg-[#FEF2F2] px-4 py-3 text-center text-[13px] font-semibold leading-[19px] text-[#DC2626]">
+          <Text accessibilityRole="alert" style={styles.errorText}>
             {errorMessage}
           </Text>
         ) : null}
-
-        <Button
-          accessibilityLabel="Get OTP"
-          className="mt-3 self-stretch rounded-2xl"
-          disabled={isDisabled}
-          onPress={onGetOtp}>
-          {isLoading ? 'Sending OTP...' : 'Send OTP'}
-        </Button>
       </View>
 
-      <Text className="mt-5 max-w-[320px] text-center text-[12px] leading-[18px] text-[#9CA1B5]">
-        Make sure this number is connected to WhatsApp. Indonesian numbers can start with 08 or +62.
-      </Text>
+      <Button
+        accessibilityLabel="Get OTP"
+        className="self-stretch"
+        disabled={isDisabled}
+        leftIcon={isLoading ? <ActivityIndicator color="#FFFFFF" size="small" /> : undefined}
+        onPress={onGetOtp}>
+        {isLoading ? 'Sending...' : 'Get OTP'}
+      </Button>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  copy: {
+    color: '#57575F',
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 7,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 10,
+    maxWidth: 300,
+    textAlign: 'center',
+  },
+  input: {
+    borderBottomColor: '#CFCFD4',
+    borderBottomWidth: 1,
+    color: '#33333A',
+    fontSize: 14,
+    height: 56,
+    includeFontPadding: false,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    width: '100%',
+  },
+  inputError: {
+    borderBottomColor: '#EF4444',
+  },
+  inputWrap: {
+    marginTop: 43,
+    width: 275,
+  },
+  title: {
+    color: '#56575C',
+    fontSize: 22,
+    fontWeight: '600',
+    lineHeight: 30,
+    marginTop: 28,
+    textAlign: 'center',
+  },
+});

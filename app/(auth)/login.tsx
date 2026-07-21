@@ -1,1 +1,3 @@
-export { default } from './index';
+import AuthFlowPage from '@/src/features/auth/pages/AuthFlowPage';
+
+export default AuthFlowPage;
