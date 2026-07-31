@@ -21,7 +21,7 @@ export async function configureNativeNotifications(requestPermission = false): P
       name: 'Reminder ZAID',
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#A855F7',
+      lightColor: '#665CFF',
     });
   }
 

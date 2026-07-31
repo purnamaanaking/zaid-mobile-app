@@ -1,3 +1,5 @@
-import { DashboardPage } from '@/src/features/dashboard/pages/DashboardPage';
+import { Redirect } from 'expo-router';
 
-export default DashboardPage;
+export default function IndexRoute() {
+  return <Redirect href="/(tabs)/ai" />;
+}

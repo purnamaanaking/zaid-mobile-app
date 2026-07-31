@@ -47,9 +47,6 @@ export function AuthPage({
     <View style={styles.container}>
       <View style={[styles.loginContent, { paddingTop: isCompactHeight ? 88 : 126 }]}>
         <GoogleMark />
-        <Text style={styles.googleCopy}>
-          We Are Integrated with Google Account,{'\n'}Also login with Google Account
-        </Text>
         {Platform.OS === 'web' ? (
           <View style={styles.webButtonSlot}>
             <div

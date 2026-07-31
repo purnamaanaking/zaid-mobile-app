@@ -3,7 +3,7 @@ import { Href, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-export type AppTabKey = 'home' | 'schedule' | 'notification' | 'profile';
+export type AppTabKey = 'schedule' | 'profile';
 
 type AppBottomDockProps = {
   activeTab: AppTabKey;
@@ -15,9 +15,7 @@ const TAB_ITEMS: {
   label: string;
   route: Href;
 }[] = [
-  { icon: 'home', key: 'home', label: 'Home', route: '/' },
   { icon: 'calendar-month', key: 'schedule', label: 'Schedule', route: '/explore' },
-  { icon: 'notifications', key: 'notification', label: 'Notification', route: '/notification' as Href },
   { icon: 'person', key: 'profile', label: 'Profile', route: '/profile' as Href },
 ];
 
@@ -94,7 +92,7 @@ export function AppBottomDock({ activeTab }: AppBottomDockProps) {
   return (
     <View pointerEvents="box-none" style={styles.bottomDockWrap}>
       <View style={styles.bottomDock}>
-        {TAB_ITEMS.slice(0, 2).map((item) => (
+        {TAB_ITEMS.slice(0, 1).map((item) => (
           <NavItem
             active={item.key === activeTab}
             icon={item.icon}
@@ -104,7 +102,7 @@ export function AppBottomDock({ activeTab }: AppBottomDockProps) {
           />
         ))}
         <View style={styles.addButtonSpace} />
-        {TAB_ITEMS.slice(2).map((item) => (
+        {TAB_ITEMS.slice(1).map((item) => (
           <NavItem
             active={item.key === activeTab}
             icon={item.icon}
@@ -146,7 +144,7 @@ function NavItem({
       accessibilityRole="button"
       onPress={onPress}
       style={styles.navItem}>
-      <MaterialIcons name={icon} color={active ? '#675CFF' : '#9AA2B2'} size={25} />
+      <MaterialIcons name={icon} color={active ? '#665CFF' : '#9AA2B2'} size={25} />
       <Text style={[styles.navText, active ? styles.navTextActive : null]}>{label}</Text>
       {active ? <View style={styles.navIndicator} /> : null}
     </Pressable>
@@ -219,7 +217,7 @@ const styles = StyleSheet.create({
     width: 76,
   },
   navIndicator: {
-    backgroundColor: '#675CFF',
+    backgroundColor: '#665CFF',
     borderRadius: 999,
     bottom: -8,
     height: 3,
@@ -238,6 +236,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   navTextActive: {
-    color: '#675CFF',
+    color: '#665CFF',
   },
 });

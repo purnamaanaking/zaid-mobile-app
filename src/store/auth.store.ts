@@ -68,15 +68,20 @@ export async function checkAuth(): Promise<boolean> {
 
   authCheckPromise = (async () => {
   try {
+    const hasDeveloperSession = await getDeveloperAuthSession();
     if (Config.useLocalUiData) {
       await deleteAuthToken();
-      await setDeveloperAuthSession();
-      user = developerUser;
-      isAuthenticated = true;
-      return true;
+      if (hasDeveloperSession) {
+        user = developerUser;
+        isAuthenticated = true;
+        return true;
+      }
+      user = null;
+      isAuthenticated = false;
+      return false;
     }
 
-    if (await getDeveloperAuthSession()) {
+    if (hasDeveloperSession) {
       await deleteAuthToken();
       user = developerUser;
       isAuthenticated = true;
@@ -149,15 +154,6 @@ export async function loginAsDeveloper() {
 
 export async function logout() {
   try {
-    if (Config.useLocalUiData) {
-      await deleteAuthToken();
-      await setDeveloperAuthSession();
-      user = developerUser;
-      isAuthenticated = true;
-      emit();
-      return;
-    }
-
     if (await getAuthToken()) {
       await authApi.logout().catch((err) => {
         console.warn('API logout endpoint call failed', err);

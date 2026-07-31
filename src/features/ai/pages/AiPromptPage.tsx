@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -23,7 +22,11 @@ import { Config } from '@/src/constants/config';
 import { Fonts } from '@/src/constants/typography';
 import { addPromptSchedule, fetchPromptSchedules } from '@/src/features/schedule/store/promptScheduleStore';
 import { extractApi, PromptAttachment } from '@/src/services/api/extract.api';
+import { useAuthStore } from '@/src/store/auth.store';
 import { PromptSchedule } from '@/src/types/schedule.types';
+import { useAppTheme } from '@/src/theme/useAppTheme';
+import { useAppSettings } from '@/src/features/settings/store/appSettings.store';
+import ZaidBlackLogo from '@/assets/brand/zaid-black.svg';
 
 type ParsedSchedule = {
   schedule: PromptSchedule;
@@ -71,6 +74,13 @@ function normalizeApiTime(value?: string | null): string {
 function addOneHour(time: string): string {
   const [h, m] = normalizeApiTime(time).split(':').map(Number);
   return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function getInitials(name?: string | null, email?: string | null) {
+  const source = (name || email || 'ZAID').trim();
+  const words = source.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  return source.slice(0, 2).toUpperCase();
 }
 
 function addDays(date: Date, days: number) {
@@ -187,13 +197,19 @@ function buildScheduleSummary(schedule: PromptSchedule) {
     ? `${schedule.date} - ${schedule.endDate}`
     : schedule.date;
 
-  return `I found a schedule: ${schedule.title} on ${dateText} at ${schedule.time}. Review the details before saving it.`;
+  return `Saya menemukan jadwal: ${schedule.title} pada ${dateText} pukul ${schedule.time}. Tinjau detail sebelum menyimpan.`;
 }
 
 export function AiPromptPage() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
+  const theme = useAppTheme();
+  const { settings } = useAppSettings();
   const scrollRef = useRef<ScrollView | null>(null);
+  const drawerX = useRef(new Animated.Value(-300)).current;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -202,12 +218,11 @@ export function AiPromptPage() {
   const [attachments, setAttachments] = useState<PromptAttachment[] | null>(null);
   const [pendingPromptRequestId, setPendingPromptRequestId] = useState<string | null>(null);
   const [previewAlreadySaved, setPreviewAlreadySaved] = useState(false);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      text: 'Hi, I can help turn your messages, documents, or images into schedules. Send a quick note like WhatsApp, and I will structure it for your calendar.',
+      text: 'Halo, saya bisa bantu ubah pesan, dokumen, atau gambar kamu jadi jadwal. Kirim catatan singkat seperti WhatsApp, dan saya akan susun untuk kalender kamu.',
     },
   ]);
 
@@ -218,10 +233,11 @@ export function AiPromptPage() {
   const successOpacity = useRef(new Animated.Value(0)).current;
 
   const statusText = useMemo(() => {
-    if (isProcessing) return 'ZAID is reading your message...';
-    if (attachedFile) return `Attached: ${attachedFile.name}`;
-    return 'Attach a document/image or type a schedule message';
+    if (isProcessing) return 'ZAID sedang membaca pesan kamu...';
+    if (attachedFile) return `Terlampir: ${attachedFile.name}`;
+    return 'Lampirkan dokumen/gambar atau tulis pesan jadwal';
   }, [attachedFile, isProcessing]);
+  const userInitials = getInitials(user?.full_name, user?.email);
 
   useEffect(() => {
     if (!isProcessing) return;
@@ -254,22 +270,24 @@ export function AiPromptPage() {
   }, [isProcessing, dot1, dot2, dot3]);
 
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showListener = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
-    const hideListener = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
-
-    return () => {
-      showListener.remove();
-      hideListener.remove();
-    };
-  }, []);
-
-  useEffect(() => {
     requestAnimationFrame(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     });
   }, [messages, isProcessing]);
+
+  function openDrawer() {
+    setDrawerOpen(true);
+    Animated.timing(drawerX, { toValue: 0, duration: 220, useNativeDriver: true }).start();
+  }
+
+  function closeDrawer() {
+    setDrawerOpen(false);
+    Animated.timing(drawerX, { toValue: -300, duration: 220, useNativeDriver: true }).start();
+  }
+
+  function toggleDrawer() {
+    if (drawerOpen) closeDrawer(); else openDrawer();
+  }
 
   function triggerSuccess(callback: () => void) {
     setShowSuccess(true);
@@ -346,7 +364,7 @@ export function AiPromptPage() {
       id: thinkingId,
       role: 'assistant',
       status: 'thinking',
-      text: 'Reading your message and looking for schedule details...',
+      text: 'Membaca pesan kamu dan mencari detail jadwal...',
     });
 
     setPrompt('');
@@ -362,7 +380,18 @@ export function AiPromptPage() {
       });
       setPendingPromptRequestId(parsed.backendSaved ? null : parsed.promptRequestId || null);
       setPreviewAlreadySaved(parsed.backendSaved);
-      triggerSuccess(() => setPreview(parsed.schedule));
+
+      if (settings.agendaConfirmationEnabled) {
+        triggerSuccess(() => setPreview(parsed.schedule));
+      } else {
+        await addPromptSchedule(parsed.schedule);
+        appendMessage({
+          id: `saved-${Date.now()}`,
+          role: 'assistant',
+          status: 'success',
+          text: `Disimpan: "${parsed.schedule.title}" ke Kalender.`,
+        });
+      }
     } catch (err: any) {
       const apiErrMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
       console.warn('Backend prompt processing failed:', apiErrMsg);
@@ -421,7 +450,7 @@ export function AiPromptPage() {
             text: `File: ${asset.name}`,
           }]);
         } else {
-          Alert.alert('Error', 'Failed to upload file to backend API.');
+          Alert.alert('Error', 'Gagal mengunggah file ke server.');
         }
       } catch (uploadErr: any) {
         const errMsg = uploadErr.response?.data?.error?.message || uploadErr.message;
@@ -462,36 +491,125 @@ export function AiPromptPage() {
       id: `saved-${Date.now()}`,
       role: 'assistant',
       status: 'success',
-      text: `Saved "${preview.title}" to Dashboard and Calendar.`,
+      text: `Disimpan: "${preview.title}" ke Kalender.`,
     });
     setPreview(null);
   }
 
   return (
-    <View style={{ flex: 1, paddingTop: insets.top }}>
+    <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: theme.bgSecondary }}>
       <LinearGradient
-        colors={['#F5F3FF', '#F8FAFC', '#FFFFFF']}
+        colors={theme.isDark ? ['#12141C', '#1A1D27', '#0F1117'] : ['#F5F3FF', '#F8FAFC', '#FFFFFF']}
         end={{ x: 0, y: 1 }}
         start={{ x: 0, y: 0 }}
         style={StyleSheet.absoluteFill}
       />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}>
         <View style={styles.header}>
           <Pressable
-            accessibilityLabel="Go back"
+            accessibilityLabel="Open menu"
             accessibilityRole="button"
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.backButton, pressed ? styles.buttonPressed : null]}>
-            <MaterialIcons name="chevron-left" color="#1F2937" size={28} />
+            onPress={toggleDrawer}
+            style={({ pressed }) => [styles.iconButton, pressed ? styles.buttonPressed : null]}>
+            <MaterialIcons name="menu" color={theme.text} size={24} />
           </Pressable>
           <View style={styles.brandWrap}>
-            <Text style={styles.brand}>ZAID</Text>
-            <Text style={styles.subtitle}>Schedule assistant</Text>
+            <ZaidBlackLogo height={26} width={87} accessibilityLabel="ZAID" />
           </View>
-          <View style={styles.headerSpacer} />
+          <Pressable
+            accessibilityLabel="Notifikasi"
+            accessibilityRole="button"
+            onPress={() => setNotifOpen((v) => !v)}
+            style={({ pressed }) => [styles.iconButton, pressed ? styles.buttonPressed : null]}>
+            <MaterialIcons name="notifications-none" color={theme.text} size={24} />
+            <View style={styles.notifBadge} />
+          </Pressable>
         </View>
+
+        {notifOpen ? (
+          <>
+            <Pressable style={styles.notifBackdrop} onPress={() => setNotifOpen(false)} />
+            <View style={[styles.notifDropdown, { top: insets.top + 68 }]}>
+              <Text style={styles.notifDropdownTitle}>Notifikasi</Text>
+              <View style={styles.notifItem}>
+                <MaterialIcons name="event" color="#665CFF" size={20} />
+                <View style={styles.notifItemText}>
+                  <Text style={styles.notifItemTitle}>Agenda besok</Text>
+                  <Text style={styles.notifItemSub}>Kamu punya 2 jadwal besok</Text>
+                </View>
+              </View>
+              <View style={styles.notifItem}>
+                <MaterialIcons name="notifications-active" color="#F59E0B" size={20} />
+                <View style={styles.notifItemText}>
+                  <Text style={styles.notifItemTitle}>Weekly reminder</Text>
+                  <Text style={styles.notifItemSub}>Cek agenda minggu ini</Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => { setNotifOpen(false); router.push('/(app)/settings-notifications' as any); }}
+                style={styles.notifFooter}>
+                <Text style={styles.notifFooterText}>Pengaturan notifikasi</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : null}
+
+        {/* Drawer overlay */}
+        {drawerOpen ? (
+          <Pressable style={styles.drawerBackdrop} onPress={closeDrawer} />
+        ) : null}
+        <Animated.View
+          style={[styles.drawer, { paddingTop: insets.top + 8, transform: [{ translateX: drawerX }] }]}
+          pointerEvents={drawerOpen ? 'auto' : 'none'}
+        >
+          <View style={styles.drawerTop}>
+            <View style={styles.drawerLogoWrap}>
+              <ZaidBlackLogo height={22} width={74} accessibilityLabel="ZAID" />
+            </View>
+            <Text style={styles.drawerHint}>Percakapan dan jadwal</Text>
+            <Pressable
+              accessibilityLabel="Buka Kalender"
+              accessibilityRole="button"
+              onPress={() => {
+                closeDrawer();
+                router.push('/(tabs)/explore');
+              }}
+              style={({ pressed }) => [styles.menuItem, pressed ? styles.menuItemPressed : null]}
+            >
+              <MaterialIcons name="calendar-today" size={20} color="#111827" />
+              <Text style={styles.menuItemText}>Kalender</Text>
+            </Pressable>
+          </View>
+          <View style={[styles.drawerBottom, { bottom: insets.bottom > 0 ? insets.bottom : 24 }]}>
+            <Pressable
+              accessibilityLabel="Buka Pengaturan"
+              accessibilityRole="button"
+              onPress={() => {
+                closeDrawer();
+                router.push('/(tabs)/profile');
+              }}
+              style={({ pressed }) => [styles.settingsButton, pressed ? styles.menuItemPressed : null]}
+            >
+              <MaterialIcons name="settings" size={22} color="#111827" />
+              <Text style={styles.settingsText}>Pengaturan</Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Buka Profil"
+              accessibilityRole="button"
+              onPress={() => {
+                closeDrawer();
+                router.push('/(tabs)/profile');
+              }}
+              style={({ pressed }) => [styles.profileButton, pressed ? styles.menuItemPressed : null]}
+            >
+              <View style={styles.profileInitials}>
+                <Text style={styles.profileInitialsText}>{userInitials}</Text>
+              </View>
+            </Pressable>
+          </View>
+        </Animated.View>
 
         <ScrollView
           bounces={false}
@@ -502,7 +620,7 @@ export function AiPromptPage() {
           style={styles.chatScroll}>
           <View style={styles.contextStrip}>
             <MaterialIcons name="auto-awesome" color="#665CFF" size={18} />
-            <Text style={styles.contextText}>Fast like chat, structured for your calendar.</Text>
+            <Text style={styles.contextText}>Cepat seperti chat, terstruktur untuk kalender kamu.</Text>
           </View>
 
           {messages.map((message) => (
@@ -524,7 +642,7 @@ export function AiPromptPage() {
               <View style={styles.successCircle}>
                 <MaterialIcons name="check" color="#FFFFFF" size={32} />
               </View>
-              <Text style={styles.successLabel}>Schedule detected</Text>
+              <Text style={styles.successLabel}>Jadwal terdeteksi</Text>
             </Animated.View>
           ) : null}
         </ScrollView>
@@ -537,7 +655,6 @@ export function AiPromptPage() {
         <AiPromptComposer
           attachedFile={attachedFile}
           bottomInset={insets.bottom}
-          isKeyboardVisible={isKeyboardVisible}
           isProcessing={isProcessing}
           onAttachFile={handleFilePick}
           onChangePrompt={setPrompt}
@@ -657,11 +774,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 38,
   },
-  brand: {
-    color: '#111827',
-    fontFamily: Fonts.displaySemi,
-    fontSize: 19,
-    lineHeight: 24,
+  iconButton: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderRadius: 19,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
   },
   brandWrap: {
     alignItems: 'center',
@@ -714,6 +835,166 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 38,
+  },
+  notifBadge: {
+    backgroundColor: '#EF4444',
+    borderColor: '#FFFFFF',
+    borderRadius: 5,
+    borderWidth: 1.5,
+    height: 10,
+    position: 'absolute',
+    right: 6,
+    top: 6,
+    width: 10,
+  },
+  notifBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 15,
+  },
+  notifDropdown: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    borderWidth: 1,
+    elevation: 16,
+    marginHorizontal: 16,
+    padding: 16,
+    position: 'absolute',
+    right: 0,
+    shadowColor: '#000',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    width: 280,
+    zIndex: 18,
+  },
+  notifDropdownTitle: {
+    color: '#111827',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 14,
+  },
+  notifItem: {
+    alignItems: 'flex-start',
+    borderBottomColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 12,
+  },
+  notifItemSub: {
+    color: '#6B7280',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  notifItemText: {
+    flex: 1,
+  },
+  notifItemTitle: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  notifFooter: {
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 4,
+  },
+  notifFooterText: {
+    color: '#665CFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  drawerBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    zIndex: 20,
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 280,
+    backgroundColor: '#FFFFFF',
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    zIndex: 25,
+    paddingHorizontal: 12,
+  },
+  drawerTop: {
+    paddingTop: 8,
+  },
+  drawerBottom: {
+    alignItems: 'center',
+    borderTopColor: '#F3F4F6',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 24,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+  },
+  drawerHint: {
+    color: '#6B7280',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  drawerLogoWrap: {
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 10,
+  },
+  menuItemPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  menuItemText: { fontSize: 14, color: '#111827', fontWeight: '600' },
+  profileButton: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'flex-end',
+    minWidth: 0,
+    paddingVertical: 4,
+  },
+  profileInitials: {
+    alignItems: 'center',
+    backgroundColor: '#111827',
+    borderRadius: 19,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  profileInitialsText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  settingsButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  settingsText: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '600',
   },
   loadingDot: {
     backgroundColor: '#665CFF',

@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "ZAID",
+    "name": "ZAID Assistant",
     "slug": "zaid-mobile-app",
-    "version": "1.0.0",
+    "version": "1.2.1",
     "orientation": "portrait",
-    "owner": "arioveisa",
+    "owner": "zhacksdev",
     "icon": "./assets/brand/zaid-icon.png",
     "scheme": "zaidmobileapp",
     "userInterfaceStyle": "automatic",
@@ -17,11 +17,12 @@
       "package": "id.zaid.assistant",
       "adaptiveIcon": {
         "backgroundColor": "#160D20",
-        "foregroundImage": "./assets/brand/zaid-icon.png",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "output": "static",
@@ -32,12 +33,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/brand/zaid-icon.png",
+          "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#615FFF",
+          "backgroundColor": "#665CFF",
           "dark": {
-            "backgroundColor": "#615FFF"
+            "backgroundColor": "#665CFF"
           }
         }
       ],
@@ -46,7 +47,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/android-icon-monochrome.png",
-          "color": "#A855F7",
+          "color": "#665CFF",
           "defaultChannel": "reminders"
         }
       ],
@@ -59,8 +60,14 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "74882b10-fbb9-40dc-a321-37f89f19eccb"
+        "projectId": "5206dfec-5b01-42fe-9df4-13ae25fd3069"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5206dfec-5b01-42fe-9df4-13ae25fd3069"
     }
   }
 }

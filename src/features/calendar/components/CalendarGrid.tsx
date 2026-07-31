@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { GestureResponderEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { GestureResponderEvent, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CalendarDay } from '@/src/features/calendar/types';
 import { WEEKDAY_LABELS } from '@/src/features/calendar/utils/date';
@@ -9,21 +9,28 @@ type CalendarGridProps = {
   markedDates: Set<string>;
   onRangeChange: (startDate: string, endDate: string) => void;
   onRangeComplete: (startDate: string, endDate: string) => void;
+  onTap: (date: string) => void;
   startDate: string | null;
   endDate: string | null;
 };
+
+const DRAG_ACTIVATION_PX = 15;
+const HORIZONTAL_BIAS = 2;
 
 export function CalendarGrid({
   days,
   markedDates,
   onRangeChange,
   onRangeComplete,
+  onTap,
   startDate,
   endDate,
 }: CalendarGridProps) {
   const [gridWidth, setGridWidth] = useState(0);
   const dragStartDate = useRef<string | null>(null);
   const dragEndDate = useRef<string | null>(null);
+  const isDragging = useRef(false);
+  const hasMoved = useRef(false);
 
   const getDateFromEvent = useCallback((event: GestureResponderEvent) => {
     if (!gridWidth) return null;
@@ -43,45 +50,70 @@ export function CalendarGrid({
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, gesture) =>
-          Math.abs(gesture.dx) > 4 || Math.abs(gesture.dy) > 4,
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponderCapture: (_, gesture) => {
+          const absX = Math.abs(gesture.dx);
+          const absY = Math.abs(gesture.dy);
+          return absX > DRAG_ACTIVATION_PX && absX > absY * HORIZONTAL_BIAS;
+        },
         onPanResponderGrant: (event) => {
           const date = getDateFromEvent(event);
           if (!date) return;
 
+          isDragging.current = false;
+          hasMoved.current = false;
           dragStartDate.current = date;
           dragEndDate.current = date;
-          onRangeChange(date, date);
         },
         onPanResponderMove: (event) => {
           const from = dragStartDate.current;
           const to = getDateFromEvent(event);
           if (!from || !to || to === dragEndDate.current) return;
 
+          hasMoved.current = true;
+          isDragging.current = true;
           dragEndDate.current = to;
           const [rangeStart, rangeEnd] = normalizeRange(from, to);
           onRangeChange(rangeStart, rangeEnd);
         },
-        onPanResponderRelease: (event) => {
+        onPanResponderRelease: (/* event */) => {
           const from = dragStartDate.current;
-          const to = dragEndDate.current || getDateFromEvent(event);
+          const to = dragEndDate.current;
 
-          dragStartDate.current = null;
-          dragEndDate.current = null;
+          if (!from) {
+            cleanup();
+            return;
+          }
 
-          if (!from || !to) return;
+          if (!hasMoved.current) {
+            cleanup();
+            onTap(from);
+            return;
+          }
 
+          if (!to) {
+            cleanup();
+            return;
+          }
+
+          cleanup();
           const [rangeStart, rangeEnd] = normalizeRange(from, to);
           onRangeComplete(rangeStart, rangeEnd);
         },
         onPanResponderTerminate: () => {
-          dragStartDate.current = null;
-          dragEndDate.current = null;
+          cleanup();
         },
       }),
-    [getDateFromEvent, normalizeRange, onRangeChange, onRangeComplete]
+    [getDateFromEvent, normalizeRange, onRangeChange, onRangeComplete, onTap]
   );
+
+  function cleanup() {
+    dragStartDate.current = null;
+    dragEndDate.current = null;
+    isDragging.current = false;
+    hasMoved.current = false;
+  }
 
   return (
     <View style={styles.wrapper}>
@@ -108,18 +140,17 @@ export function CalendarGrid({
           const isWeekend = day.date.getDay() === 0 || day.date.getDay() === 6;
 
           return (
-            <View
+            <Pressable
               accessibilityLabel={`Select date ${day.dateKey}`}
               accessibilityRole="button"
               key={day.dateKey}
-              style={styles.dayCell}>
+              onPress={() => onTap(day.dateKey)}
+              style={({ pressed }) => [styles.dayCell, pressed ? styles.dayCellPressed : null]}>
               
-              {/* Overlapping Range Background Highlights */}
               {isRangeStart && <View style={styles.rangeBackgroundRight} />}
               {isRangeEnd && <View style={styles.rangeBackgroundLeft} />}
               {isInRange && <View style={styles.rangeBackgroundFull} />}
 
-              {/* Active Circle or Standard cell */}
               {isSelected ? (
                 <View style={styles.activeCircle}>
                   <Text style={styles.dayTextActive}>
@@ -140,7 +171,7 @@ export function CalendarGrid({
                   {isMarked && <View style={styles.dot} />}
                 </View>
               )}
-            </View>
+            </Pressable>
           );
         })}
       </View>
@@ -155,6 +186,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '14.285%',
     position: 'relative',
+  },
+  dayCellPressed: {
+    opacity: 0.72,
   },
   innerCell: {
     alignItems: 'center',

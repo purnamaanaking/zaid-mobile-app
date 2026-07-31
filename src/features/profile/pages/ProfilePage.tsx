@@ -1,42 +1,29 @@
 import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { Href, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { AppBottomDock } from '@/src/features/navigation/components/AppBottomDock';
 import { ProfileHeaderCard } from '@/src/features/profile/components/ProfileHeaderCard';
-import { ProfileSettingGroup } from '@/src/features/profile/components/ProfileSettingGroup';
-import { ProfileSetting } from '@/src/features/profile/types';
 import { useAuthStore } from '@/src/store/auth.store';
+import { PreferencesTheme, useAppSettings } from '@/src/features/settings/store/appSettings.store';
+import { useAppTheme } from '@/src/theme/useAppTheme';
 
-const ACCOUNT_SETTINGS: ProfileSetting[] = [
-  {
-    description: 'Synced from your connected Google profile',
-    hasAlert: false,
-    icon: 'person-outline',
-    title: 'My Account',
-  },
-  {
-    description: 'Manage your device security',
-    icon: 'lock-outline',
-    title: 'Face ID / Touch ID',
-    type: 'toggle',
-  },
-  {
-    description: 'Further secure your account for safety',
-    icon: 'shield',
-    title: 'Two-Factor Authentication',
-  },
+const THEME_OPTIONS: { icon: keyof typeof MaterialIcons.glyphMap; label: string; value: PreferencesTheme }[] = [
+  { icon: 'brightness-auto', label: 'Sistem', value: 'system' },
+  { icon: 'light-mode', label: 'Terang', value: 'light' },
+  { icon: 'dark-mode', label: 'Gelap', value: 'dark' },
 ];
 
-const SUPPORT_SETTINGS: ProfileSetting[] = [
-  { icon: 'notifications-none', title: 'Help & Support' },
-  { icon: 'favorite-border', title: 'About App' },
+const PROFILE_MENUS: { icon: keyof typeof MaterialIcons.glyphMap; route: Href; title: string }[] = [
+  { icon: 'person-outline', route: '/(app)/settings-profile' as Href, title: 'Pengaturan Profil' },
+  { icon: 'notifications-none', route: '/(app)/settings-notifications' as Href, title: 'Pengaturan Notifikasi' },
 ];
 
 export function ProfilePage() {
   const router = useRouter();
   const { logout } = useAuthStore();
+  const { settings, updateAppSettings } = useAppSettings();
+  const theme = useAppTheme();
 
   const handleLogout = () => {
     logout();
@@ -44,61 +31,180 @@ export function ProfilePage() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.bgSecondary }]}>
+      <View style={styles.backHeader}>
+        <Pressable
+          accessibilityLabel="Kembali ke halaman utama"
+          accessibilityRole="button"
+          onPress={() => router.push('/(tabs)/ai')}
+          style={({ pressed }) => [styles.backButton, pressed ? { opacity: 0.7 } : null]}>
+          <MaterialIcons name="arrow-back" size={22} color={theme.text} />
+        </Pressable>
+        <Text style={[styles.pageTitle, { color: theme.text }]}>Pengaturan</Text>
+        <View style={styles.backSpacer} />
+      </View>
       <ScrollView
         bounces={false}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageTitle}>Profile</Text>
         <ProfileHeaderCard />
-        
+
         <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>Account Settings</Text>
-          <ProfileSettingGroup items={ACCOUNT_SETTINGS} />
+          {PROFILE_MENUS.map((item) => (
+            <Pressable
+              key={item.title}
+              accessibilityLabel={item.title}
+              accessibilityRole="button"
+              onPress={() => router.push(item.route)}
+              style={({ pressed }) => [styles.menuItem, pressed ? { opacity: 0.7 } : null]}>
+              <MaterialIcons name={item.icon} size={22} color="#374151" />
+              <Text style={styles.menuText}>{item.title}</Text>
+              <MaterialIcons name="chevron-right" size={20} color="#D1D5DB" style={{ marginLeft: 'auto' }} />
+            </Pressable>
+          ))}
+          <View style={styles.menuItem}>
+            <MaterialIcons name="check-circle-outline" size={22} color="#374151" />
+            <View style={styles.confirmRow}>
+              <Text style={styles.menuText}>Form konfirmasi agenda</Text>
+              <Text style={styles.confirmHint}>
+                {settings.agendaConfirmationEnabled ? 'Aktif — hasil prompt buka form review' : 'Nonaktif — agenda langsung disimpan'}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="switch"
+              accessibilityState={{ checked: settings.agendaConfirmationEnabled }}
+              onPress={() => updateAppSettings({ agendaConfirmationEnabled: !settings.agendaConfirmationEnabled })}
+              style={[styles.switch, settings.agendaConfirmationEnabled ? styles.switchOn : null]}>
+              <View style={[styles.knob, settings.agendaConfirmationEnabled ? styles.knobOn : null]} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>Support</Text>
-          <ProfileSettingGroup items={SUPPORT_SETTINGS} />
+          <Text style={[styles.menuItem, { borderBottomColor: '#F3F4F6', borderBottomWidth: 1 }, styles.sectionLabel]}>Tampilan</Text>
+          {THEME_OPTIONS.map((option) => {
+            const active = settings.theme === option.value;
+            return (
+              <Pressable
+                key={option.value}
+                accessibilityLabel={option.label}
+                accessibilityRole="button"
+                onPress={() => updateAppSettings({ theme: option.value })}
+                style={[styles.menuItem, active ? styles.menuItemActive : null]}>
+                <MaterialIcons name={option.icon} size={22} color={active ? '#665CFF' : '#374151'} />
+                <Text style={[styles.menuText, active ? styles.menuTextActive : null]}>{option.label}</Text>
+                {active ? <MaterialIcons name="check" size={20} color="#665CFF" style={{ marginLeft: 'auto' }} /> : null}
+              </Pressable>
+            );
+          })}
         </View>
 
-        {/* Separated Logout button at the bottom */}
         <Pressable
-          accessibilityLabel="Log out of application"
+          accessibilityLabel="Keluar dari aplikasi"
           accessibilityRole="button"
           onPress={handleLogout}
           style={styles.logoutButton}>
           <MaterialIcons name="logout" color="#EF4444" size={20} />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>Keluar</Text>
         </Pressable>
       </ScrollView>
-      <AppBottomDock activeTab="profile" />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    alignItems: 'center',
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  backHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  backSpacer: {
+    width: 40,
+  },
   content: {
     gap: 24,
-    paddingBottom: 136,
+    paddingBottom: 48,
     paddingHorizontal: 26,
-    paddingTop: 56,
+    paddingTop: 16,
   },
   pageTitle: {
     color: '#111827',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
   },
   settingsSection: {
-    gap: 10,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
-  sectionTitle: {
-    color: '#374151',
-    fontSize: 14,
+  menuItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomColor: '#F3F4F6',
+    borderBottomWidth: 1,
+  },
+  menuText: {
+    color: '#111827',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  menuTextActive: {
+    color: '#665CFF',
     fontWeight: '600',
-    paddingLeft: 4,
+  },
+  menuItemActive: {
+    backgroundColor: '#F3F1FF',
+  },
+  sectionLabel: {
+    color: '#6B7280',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  confirmRow: {
+    flex: 1,
+    marginRight: 8,
+  },
+  confirmHint: {
+    color: '#6B7280',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  switch: {
+    backgroundColor: '#D1D5DB',
+    borderRadius: 14,
+    height: 24,
+    justifyContent: 'center',
+    marginLeft: 'auto',
+    width: 44,
+  },
+  switchOn: {
+    backgroundColor: '#665CFF',
+  },
+  knob: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 9,
+    height: 18,
+    transform: [{ translateX: 2 }],
+    width: 18,
+  },
+  knobOn: {
+    transform: [{ translateX: 22 }],
   },
   safeArea: {
     backgroundColor: '#FAFAFB',

@@ -1,5 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Fonts } from '@/src/constants/typography';
 
@@ -11,7 +12,6 @@ type AiPromptComposerProps = {
   prompt: string;
   attachedFile: { name: string; type: string } | null;
   onRemoveAttachedFile: () => void;
-  isKeyboardVisible?: boolean;
   bottomInset?: number;
 };
 
@@ -23,13 +23,23 @@ export function AiPromptComposer({
   prompt,
   attachedFile,
   onRemoveAttachedFile,
-  isKeyboardVisible = false,
   bottomInset = 0,
 }: AiPromptComposerProps) {
-  const currentMarginBottom = isKeyboardVisible ? 12 : (bottomInset > 0 ? bottomInset + 12 : 24);
+  const restMargin = bottomInset > 0 ? bottomInset + 12 : 24;
+  const marginAnim = useRef(new Animated.Value(restMargin)).current;
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = () => Animated.timing(marginAnim, { toValue: 12, duration: 150, useNativeDriver: false }).start();
+    const onHide = () => Animated.timing(marginAnim, { toValue: restMargin, duration: 200, useNativeDriver: false }).start();
+    const s1 = Keyboard.addListener(showEvent, onShow);
+    const s2 = Keyboard.addListener(hideEvent, onHide);
+    return () => { s1.remove(); s2.remove(); };
+  }, [restMargin, marginAnim]);
 
   return (
-    <View style={[styles.card, { marginBottom: currentMarginBottom }]}>
+    <Animated.View style={[styles.card, { marginBottom: marginAnim }]}>
       {/* Render Attached File Badge if present */}
       {attachedFile && (
         <View style={styles.attachmentBadge}>
@@ -80,7 +90,7 @@ export function AiPromptComposer({
           <MaterialIcons name={isProcessing ? 'hourglass-empty' : 'send'} color="#FFFFFF" size={22} />
         </Pressable>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

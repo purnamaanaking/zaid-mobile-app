@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useWindowDimensions, TextInput, Alert } from 'react-native';
+import { Redirect } from 'expo-router';
 import { useAuthStore } from '@/src/store/auth.store';
 import { authApi } from '@/src/services/api/auth.api';
-import { DashboardPage } from '@/src/features/dashboard/pages/DashboardPage';
 import { AuthPage } from '@/src/features/auth/pages/AuthPage';
 import { PhoneOtpPage } from '@/src/features/auth/pages/PhoneOtpPage';
 import { OtpVerificationPage } from '@/src/features/auth/pages/OtpVerificationPage';
@@ -58,7 +58,7 @@ export default function AuthFlowPage() {
   }
 
   if (isAuthenticated) {
-    return <DashboardPage />;
+    return <Redirect href="/(tabs)/ai" />;
   }
 
   const completeGoogleLogin = async (idToken: string | null) => {

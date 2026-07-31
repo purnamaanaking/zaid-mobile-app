@@ -1,8 +1,9 @@
 import { useMemo, useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 
-import { CalendarBottomDock } from '@/src/features/calendar/components/CalendarBottomDock';
 import { CalendarFilterBar } from '@/src/features/calendar/components/CalendarFilterBar';
 import { CalendarGrid } from '@/src/features/calendar/components/CalendarGrid';
 import { CalendarHeader } from '@/src/features/calendar/components/CalendarHeader';
@@ -19,8 +20,11 @@ import {
 import { PromptSchedule } from '@/src/types/schedule.types';
 import { deleteEvent, fetchEvents, useEvents } from '@/src/features/events/store/eventStore';
 import { EventCard } from '@/src/features/events/components/EventCard';
+import { useAppTheme } from '@/src/theme/useAppTheme';
 
 export function CalendarPage() {
+  const router = useRouter();
+  const theme = useAppTheme();
   const today = useMemo(() => new Date(), []);
   const [monthDate, setMonthDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [startDate, setStartDate] = useState<string | null>(dateKey(today));
@@ -121,6 +125,14 @@ export function CalendarPage() {
     setTaskSheetVisible(true);
   }
 
+  function handleTap(date: string) {
+    syncMonthToDate(date);
+    setStartDate(date);
+    setEndDate(date);
+    setActiveFilter('recent');
+    setTaskSheetVisible(true);
+  }
+
   function handleJumpToday() {
     const todayKey = dateKey(today);
     setMonthDate(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -141,8 +153,12 @@ export function CalendarPage() {
     }
   }
 
-  function handleDelete(scheduleId: string) {
-    deletePromptSchedule(scheduleId);
+  async function handleDelete(scheduleId: string) {
+    try {
+      await deletePromptSchedule(scheduleId);
+    } catch (err: any) {
+      Alert.alert('Gagal menghapus', err.message || 'Terjadi kesalahan.');
+    }
     setEditingScheduleId((current) => (current === scheduleId ? null : current));
   }
 
@@ -155,10 +171,20 @@ export function CalendarPage() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.bgSecondary }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}>
+        <View style={[styles.backHeader, { backgroundColor: theme.bgSecondary }]}>
+          <Pressable
+            accessibilityLabel="Kembali ke halaman utama"
+            accessibilityRole="button"
+            onPress={() => router.push('/(tabs)/ai')}
+            style={({ pressed }) => [styles.backButton, pressed ? { opacity: 0.7 } : null]}>
+            <MaterialIcons name="arrow-back" size={24} color={theme.text} />
+            <Text style={[styles.backButtonText, { color: theme.text }]}>Kembali</Text>
+          </Pressable>
+        </View>
         {/*
           stickyHeaderIndices={[1]} → child index ke-1 (StickyBar) akan menempel
           di atas ketika discroll melewatinya ke atas.
@@ -181,7 +207,7 @@ export function CalendarPage() {
           stickyHeaderIndices={[1]}>
 
           <View
-            style={styles.calendarSection}
+            style={[styles.calendarSection, { backgroundColor: theme.bgSecondary }]}
             onLayout={(e) => setCalendarSectionHeight(e.nativeEvent.layout.height)}>
             <CalendarHeader
               monthDate={monthDate}
@@ -194,6 +220,7 @@ export function CalendarPage() {
               markedDates={markedDates}
               onRangeChange={handleRangeChange}
               onRangeComplete={handleRangeComplete}
+              onTap={handleTap}
               startDate={startDate}
               endDate={endDate}
             />
@@ -202,6 +229,7 @@ export function CalendarPage() {
           {/* ── [1] STICKY BAR: bulan mini + filter ────────────────── */}
           <View style={[
             styles.stickyBar,
+            { backgroundColor: theme.bgSecondary },
             isSticky ? styles.stickyBarActive : null,
           ]}>
             <Text style={styles.stickyMonthLabel}>
@@ -231,17 +259,21 @@ export function CalendarPage() {
               ))
             ) : (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No schedule on this date range</Text>
+                <Text style={styles.emptyTitle}>Tidak ada jadwal di rentang ini</Text>
                 <Text style={styles.emptyText}>
-                  Schedules created from AI prompt will be marked on the calendar.
+                  Jadwal dari AI prompt akan muncul di kalender.
                 </Text>
               </View>
             )}
             {visibleEvents.length ? (
               <View style={styles.eventList}>
-                <Text style={styles.eventHeading}>Events</Text>
+                <Text style={styles.eventHeading}>Acara</Text>
                 {visibleEvents.map((event) => (
-                  <EventCard event={event} key={event.id} onDelete={() => void deleteEvent(event.id)} />
+                  <EventCard event={event} key={event.id} onDelete={() => {
+                    deleteEvent(event.id).catch((err: any) => {
+                      Alert.alert('Gagal menghapus', err?.message || 'Terjadi kesalahan.');
+                    });
+                  }} />
                 ))}
               </View>
             ) : null}
@@ -261,12 +293,29 @@ export function CalendarPage() {
         visible={taskSheetVisible}
       />
 
-      <CalendarBottomDock />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+  backButtonText: {
+    color: '#111827',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  backHeader: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
   calendarSection: {
     paddingBottom: 8,
     paddingHorizontal: 24,

@@ -53,7 +53,7 @@ export function OtpVerificationPage({
               style={[
                 styles.otpInput,
                 {
-                  borderBottomColor: digit ? '#7479FF' : '#CFCFD4',
+                  borderBottomColor: digit ? '#665CFF' : '#CFCFD4',
                   width: otpInputWidth,
                 },
               ]}
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   resendLink: {
-    color: '#6268FF',
+    color: '#665CFF',
     fontSize: 13,
     lineHeight: 18,
   },

@@ -2,8 +2,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   PanResponder,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -43,6 +46,7 @@ export function CalendarTaskSheet({
 }: CalendarTaskSheetProps) {
   const slideAnim = useRef(new Animated.Value(420)).current;
   const dragAnim = useRef(new Animated.Value(0)).current;
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [isAdding, setAdding] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftTime, setDraftTime] = useState('09:00');
@@ -81,6 +85,14 @@ export function CalendarTaskSheet({
       }),
     [dragAnim, onClose]
   );
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const s1 = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const s2 = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    return () => { s1.remove(); s2.remove(); };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -145,19 +157,23 @@ export function CalendarTaskSheet({
 
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.kbv}>
       <View style={styles.backdrop}>
         <Pressable accessibilityLabel="Close selected tasks" style={styles.backdropPressable} onPress={onClose} />
         <Animated.View
-          style={[
-            styles.sheet,
-            {
-              transform: [
-                {
-                  translateY: Animated.add(slideAnim, dragAnim),
-                },
-              ],
-            },
-          ]}>
+            style={[
+              styles.sheet,
+              { maxHeight: isKeyboardVisible ? '55%' : '78%' },
+              {
+                transform: [
+                  {
+                    translateY: Animated.add(slideAnim, dragAnim),
+                  },
+                ],
+              },
+            ]}>
           <View {...panResponder.panHandlers} style={styles.dragArea}>
             <View style={styles.handle} />
           </View>
@@ -188,7 +204,10 @@ export function CalendarTaskSheet({
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={styles.listContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
             {isAdding ? (
               <View style={styles.manualCard}>
                 <View style={styles.manualHeader}>
@@ -284,7 +303,7 @@ export function CalendarTaskSheet({
               ))
             ) : (
               <View style={styles.emptyCard}>
-                <MaterialIcons name="event-busy" color="#A7A2FF" size={28} />
+                <MaterialIcons name="event-busy" color="#665CFF" size={28} />
                 <Text style={styles.emptyTitle}>No task for this date</Text>
                 <Text style={styles.emptyText}>Tasks created from AI prompts will appear here.</Text>
               </View>
@@ -292,6 +311,7 @@ export function CalendarTaskSheet({
           </ScrollView>
         </Animated.View>
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -373,6 +393,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     height: 5,
     width: 48,
+  },
+  kbv: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   header: {
     alignItems: 'center',

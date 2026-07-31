@@ -1,5 +1,5 @@
-import { NotificationsPage } from '@/src/features/notifications/pages/NotificationsPage';
+import { Redirect } from 'expo-router';
 
 export default function NotificationRoute() {
-  return <NotificationsPage />;
+  return <Redirect href="/(tabs)/ai" />;
 }
