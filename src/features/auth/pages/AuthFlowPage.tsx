@@ -6,7 +6,7 @@ import { authApi } from '@/src/services/api/auth.api';
 import { AuthPage } from '@/src/features/auth/pages/AuthPage';
 import { PhoneOtpPage } from '@/src/features/auth/pages/PhoneOtpPage';
 import { OtpVerificationPage } from '@/src/features/auth/pages/OtpVerificationPage';
-import { AuthLoadingContent, AuthShell, AuthLayoutMetrics } from '@/src/features/auth/components/AuthShared';
+import { AuthShell, AuthLayoutMetrics } from '@/src/features/auth/components/AuthShared';
 import { AuthStep } from '@/src/features/auth/types';
 import { initGoogleAuth, signInWithGoogle } from '@/src/services/auth/googleAuth';
 import { setAuthToken } from '@/src/services/storage/token';
@@ -21,9 +21,7 @@ export default function AuthFlowPage() {
   const [verificationId, setVerificationId] = useState('');
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
   const [isOtpRequesting, setOtpRequesting] = useState(false);
-  const [isOtpVerifying, setOtpVerifying] = useState(false);
   const [phoneError, setPhoneError] = useState('');
-  const [googleSuccessMessage, setGoogleSuccessMessage] = useState('');
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
 
   const { height, width } = useWindowDimensions();
@@ -45,13 +43,6 @@ export default function AuthFlowPage() {
   useEffect(() => {
     initGoogleAuth();
   }, []);
-
-  useEffect(() => {
-    if (!googleSuccessMessage) return undefined;
-
-    const timeout = setTimeout(() => setGoogleSuccessMessage(''), 2600);
-    return () => clearTimeout(timeout);
-  }, [googleSuccessMessage]);
 
   if (!isInitialized) {
     return null; // Prevent UI flicker
@@ -83,11 +74,8 @@ export default function AuthFlowPage() {
       // Persist the token so onboarding, calendar, prompts, and tasks use Sanctum auth.
       await setAuthToken(access_token);
       setAccessToken(access_token);
-      setGoogleSuccessMessage('Google login successful');
 
       if (onboarding.next_step === 'dashboard') {
-        setStep('loading');
-        await new Promise((resolve) => setTimeout(resolve, 900));
         await login(access_token, {
           id: backendUser.id,
           email: backendUser.email,
@@ -131,9 +119,7 @@ export default function AuthFlowPage() {
     setPhoneError('');
     setOtpRequesting(true);
     try {
-      console.log('[Onboarding] Requesting OTP for phone', cleanedPhone);
       const res = await authApi.submitPhone(cleanedPhone, 'ID');
-      console.log('[Onboarding] OTP response', res);
       if (res.success && res.data?.verification_id) {
         setPhone(cleanedPhone);
         setVerificationId(res.data.verification_id);
@@ -143,7 +129,6 @@ export default function AuthFlowPage() {
         Alert.alert('Error', 'Failed to send OTP. Please try again.');
       }
     } catch (err: any) {
-      console.warn('API phone submission failed', err.response?.data || err.message || err);
       const validationMessage = err.response?.data?.errors
         ? Object.values(err.response.data.errors).flat().join('\n')
         : null;
@@ -171,10 +156,7 @@ export default function AuthFlowPage() {
       }
       const res = await authApi.verifyPhoneOtp(verificationId, otpCode);
       if (res.success && res.data && accessToken) {
-        setOtpVerifying(true);
-        setStep('loading');
         const profile = await authApi.getProfile();
-        await new Promise((resolve) => setTimeout(resolve, 900));
         await login(accessToken, {
           id: profile.data.id,
           email: profile.data.email,
@@ -190,14 +172,10 @@ export default function AuthFlowPage() {
     } catch (err: any) {
       console.warn('API OTP verification failed', err);
       Alert.alert('Error', err.response?.data?.message || 'OTP is invalid or expired. Please try again.');
-      setStep('otp');
-      setOtpVerifying(false);
     }
   };
 
   const handleDeveloperSignIn = async () => {
-    setStep('loading');
-    await new Promise((resolve) => setTimeout(resolve, 450));
     await loginAsDeveloper();
   };
 
@@ -236,7 +214,9 @@ export default function AuthFlowPage() {
     }
   };
 
-  const displayedPhone = phone || '+91 987987333';
+  const maskedPhone = phone.length > 4
+    ? phone.slice(0, 4) + ' •••• •••• ' + phone.slice(-2)
+    : phone;
 
   return (
     <AuthShell metrics={metrics}>
@@ -260,14 +240,13 @@ export default function AuthFlowPage() {
           }}
           onGetOtp={handleGetOtp}
           phone={phone}
-          successMessage={googleSuccessMessage}
         />
       )}
       {step === 'otp' && (
         <OtpVerificationPage
           isCompactHeight={isCompactHeight}
-          isLoading={isOtpVerifying}
-          maskedPhone={displayedPhone}
+          isLoading={false}
+          maskedPhone={maskedPhone}
           onOtpChange={handleOtpChange}
           onOtpKeyPress={handleOtpKeyPress}
           onVerify={handleVerifyOtp}
@@ -277,7 +256,6 @@ export default function AuthFlowPage() {
           onResendOtp={handleResendOtp}
         />
       )}
-      {step === 'loading' && <AuthLoadingContent />}
     </AuthShell>
   );
 }

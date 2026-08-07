@@ -45,31 +45,60 @@ export function AuthPage({
 
   return (
     <View style={styles.container}>
-      <View style={[styles.loginContent, { paddingTop: isCompactHeight ? 88 : 126 }]}>
+      <View
+        style={[
+          styles.iconBox,
+          {
+            height: isCompactHeight ? 70 : 82,
+            width: isCompactHeight ? 70 : 82,
+          },
+        ]}>
         <GoogleMark />
+      </View>
+
+      <Text style={styles.heading}>Continue with Google</Text>
+      <Text style={styles.subtitle}>
+        Choose your Google account first. Phone verification is locked until Google sign-in succeeds.
+      </Text>
+
+      <View style={styles.buttonRow}>
         {Platform.OS === 'web' ? (
-          <View style={styles.webButtonSlot}>
+          <>
             <div
               id={WEB_GOOGLE_BUTTON_ID}
               style={{
-                display: webButtonReady ? 'none' : 'block',
-                height: 0,
-                overflow: 'hidden',
-                width: 0,
+                alignItems: 'center',
+                display: 'flex',
+                justifyContent: 'center',
+                minHeight: 44,
+                width: '100%',
               }}
             />
-          </View>
+            {!webButtonReady && (
+              <Button
+                accessibilityLabel="Continue with Google"
+                className="self-stretch rounded-full"
+                leftIcon={<GoogleMark small />}
+                onPress={onGoogleSignIn}
+                textClassName="font-semibold text-[#56575C]"
+                variant="outline">
+                Open Google Sign-In
+              </Button>
+            )}
+          </>
         ) : (
-          null
+          <Button
+            accessibilityLabel="Continue with Google"
+            className="self-stretch rounded-full"
+            leftIcon={<GoogleMark small />}
+            onPress={onGoogleSignIn}
+            textClassName="font-semibold text-[#56575C]"
+            variant="outline">
+            Sign in with Google
+          </Button>
         )}
       </View>
 
-      <Button
-        accessibilityLabel="Login with Google"
-        className="self-stretch"
-        onPress={onGoogleSignIn}>
-        Log In
-      </Button>
       {enableDeveloperSignIn ? (
         <>
           <Button
@@ -83,20 +112,44 @@ export function AuthPage({
           <Text style={styles.developerCopy}>Preview the app without Google authentication.</Text>
         </>
       ) : null}
+
+      <Text style={styles.footer}>Sign in with Google to continue to phone verification.</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    alignItems: 'center',
     flex: 1,
+    paddingHorizontal: 4,
   },
-  googleCopy: {
-    color: '#98A1B8',
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 31,
+  iconBox: {
+    alignItems: 'center',
+    backgroundColor: '#F6F4FF',
+    borderRadius: 28,
+    justifyContent: 'center',
+  },
+  heading: {
+    color: '#303244',
+    fontSize: 24,
+    fontWeight: '600',
+    lineHeight: 30,
+    marginTop: 24,
     textAlign: 'center',
+  },
+  subtitle: {
+    color: '#707386',
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 12,
+    maxWidth: 280,
+    textAlign: 'center',
+  },
+  buttonRow: {
+    marginTop: 32,
+    maxWidth: 340,
+    width: '100%',
   },
   developerCopy: {
     color: '#98A1B8',
@@ -105,12 +158,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
-  loginContent: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  webButtonSlot: {
-    height: 0,
-    width: 0,
+  footer: {
+    color: '#9CA1B5',
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 20,
+    maxWidth: 300,
+    textAlign: 'center',
   },
 });
