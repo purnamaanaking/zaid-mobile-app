@@ -3,7 +3,7 @@ import { PromptSchedule } from '@/src/types/schedule.types';
 import { Config } from '@/src/constants/config';
 import { buildPromptSchedules } from '@/src/features/schedule/data/promptSchedules';
 import { scheduleApi } from '@/src/services/api/schedule.api';
-import { deleteReminder, fetchReminders, remindersForTask, reminderForTask, saveReminder, updateReminder } from '@/src/features/reminders/store/reminderStore';
+import { deleteReminder, fetchReminders, remindersForEvent, saveReminder, updateReminder } from '@/src/features/reminders/store/reminderStore';
 
 let schedules: PromptSchedule[] = [];
 let isLoading = false;
@@ -41,7 +41,7 @@ function addOneHour(time: string): string {
 }
 
 function applyReminderState(schedule: PromptSchedule): PromptSchedule {
-  const reminder = reminderForTask(schedule.id);
+  const reminder = remindersForEvent(schedule.id).find((item) => item.status === 'pending');
 
   return {
     ...schedule,
@@ -105,10 +105,10 @@ export async function fetchPromptSchedules() {
           endTime: addOneHour(time),
           location: 'Google Calendar & Tasks',
           description: item.description || '',
-          reminderMinutes: reminderForTask(item.id)?.minutes_before ?? 30,
-          reminderEnabled: Boolean(reminderForTask(item.id)),
-          reminderChannel: reminderForTask(item.id)?.channel ?? 'whatsapp',
-          reminderId: reminderForTask(item.id)?.id,
+          reminderMinutes: remindersForEvent(item.id).find((reminder) => reminder.status === 'pending')?.minutes_before ?? 30,
+          reminderEnabled: remindersForEvent(item.id).some((reminder) => reminder.status === 'pending'),
+          reminderChannel: remindersForEvent(item.id).find((reminder) => reminder.status === 'pending')?.channel ?? 'whatsapp',
+          reminderId: remindersForEvent(item.id).find((reminder) => reminder.status === 'pending')?.id,
           status: item.status === 'completed' ? 'done' : 'active',
           recurring: item.recurrence?.type || 'none',
           sourcePrompt: item.description || '',
@@ -138,7 +138,7 @@ export async function addPromptSchedule(schedule: PromptSchedule) {
     try {
       if (schedule.reminderEnabled) {
         const reminder = await saveReminder({
-          task_id: schedule.id,
+          calendar_event_id: schedule.id,
           minutes_before: schedule.reminderMinutes,
           channel: schedule.reminderChannel ?? 'whatsapp',
         });
@@ -172,7 +172,7 @@ export async function addPromptSchedule(schedule: PromptSchedule) {
     const created = await scheduleApi.createTask(payload);
     if (schedule.reminderEnabled) {
       await saveReminder({
-        task_id: created.data.task.id,
+        calendar_event_id: created.data.task.id,
         minutes_before: schedule.reminderMinutes,
         channel: schedule.reminderChannel ?? 'whatsapp',
       });
@@ -194,7 +194,7 @@ export async function deletePromptSchedule(scheduleId: string) {
 
   if (Config.useLocalUiData) {
     try {
-      const taskReminders = remindersForTask(scheduleId);
+      const taskReminders = remindersForEvent(scheduleId);
       for (const reminder of taskReminders) await deleteReminder(reminder.id);
       return;
     } catch (err) {
@@ -206,7 +206,7 @@ export async function deletePromptSchedule(scheduleId: string) {
   }
 
   try {
-    const taskReminders = remindersForTask(scheduleId);
+    const taskReminders = remindersForEvent(scheduleId);
     for (const reminder of taskReminders) await deleteReminder(reminder.id);
     await scheduleApi.deleteTask(scheduleId);
   } catch (err) {
@@ -228,7 +228,7 @@ export async function updatePromptSchedule(scheduleId: string, patch: Partial<Pr
 
   if (Config.useLocalUiData) {
     try {
-      const existingReminder = reminderForTask(scheduleId);
+      const existingReminder = remindersForEvent(scheduleId).find((item) => item.status === 'pending');
       const nextSchedule = schedules.find((item) => item.id === scheduleId);
       if (nextSchedule?.reminderEnabled) {
         const reminderPayload = {
@@ -237,7 +237,7 @@ export async function updatePromptSchedule(scheduleId: string, patch: Partial<Pr
         };
         const reminder = existingReminder
           ? await updateReminder(existingReminder.id, reminderPayload)
-          : await saveReminder({ task_id: scheduleId, ...reminderPayload });
+          : await saveReminder({ calendar_event_id: scheduleId, ...reminderPayload });
         schedules = schedules.map((item) =>
           item.id === scheduleId
             ? { ...item, reminderEnabled: true, reminderId: reminder.id }
@@ -269,7 +269,7 @@ export async function updatePromptSchedule(scheduleId: string, patch: Partial<Pr
       scheduled_time: toApiTime(patch.time),
     };
     await scheduleApi.updateTask(scheduleId, payload);
-    const existingReminder = reminderForTask(scheduleId);
+    const existingReminder = remindersForEvent(scheduleId).find((item) => item.status === 'pending');
     const nextSchedule = schedules.find((item) => item.id === scheduleId);
     if (nextSchedule?.reminderEnabled) {
       const reminderPayload = {
@@ -277,7 +277,7 @@ export async function updatePromptSchedule(scheduleId: string, patch: Partial<Pr
         channel: nextSchedule.reminderChannel ?? 'whatsapp' as const,
       };
       if (existingReminder) await updateReminder(existingReminder.id, reminderPayload);
-      else await saveReminder({ task_id: scheduleId, ...reminderPayload });
+      else await saveReminder({ calendar_event_id: scheduleId, ...reminderPayload });
     } else if (existingReminder) {
       await deleteReminder(existingReminder.id);
     }

@@ -12,6 +12,7 @@ export type ProcessPromptRequest = {
 };
 
 export type PromptEntityResponse = {
+  action?: string;
   title?: string;
   description?: string;
   scheduled_date?: string; // YYYY-MM-DD

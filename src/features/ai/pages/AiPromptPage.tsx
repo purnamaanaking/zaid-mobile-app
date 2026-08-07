@@ -29,9 +29,10 @@ import { useAppSettings } from '@/src/features/settings/store/appSettings.store'
 import ZaidBlackLogo from '@/assets/brand/zaid-black.svg';
 
 type ParsedSchedule = {
-  schedule: PromptSchedule;
+  schedule?: PromptSchedule;
   backendSaved: boolean;
   promptRequestId?: string;
+  response?: string;
 };
 
 type ChatMessage = {
@@ -320,30 +321,21 @@ export function AiPromptPage() {
     if (Config.useLocalUiData) return parseLocalSchedule(text, currentAttachments);
 
     const res = await extractApi.processPrompt(text, currentAttachments);
+    if (!res.success || !res.data) throw new Error(res.data?.human_response || 'ZAID gagal memproses pesan.');
 
-    if (res.success && res.data) {
-      const { parse_status, result } = res.data;
-
-      if (res.data.requires_confirmation) {
-        const entities = res.data.confirmation?.entities;
-        if (!entities) throw new Error(res.data.human_response || 'ZAID meminta konfirmasi, tetapi detail tidak tersedia.');
-        return {
-          schedule: taskToSchedule(entities, text),
-          backendSaved: false,
-          promptRequestId: res.data.prompt_request_id,
-        } satisfies ParsedSchedule;
-      }
-
-      if (parse_status === 'parsed' && result) {
-        return {
-          schedule: taskToSchedule(result.task || result, text),
-          backendSaved: Boolean(result.task?.id || result.id),
-          promptRequestId: res.data.prompt_request_id,
-        } satisfies ParsedSchedule;
-      }
+    const entities = res.data.confirmation?.entities;
+    if (res.data.requires_confirmation && entities && ['CREATE', 'CREATE_EVENTS'].includes(entities.action ?? '')) {
+      return {
+        schedule: taskToSchedule(entities, text),
+        backendSaved: false,
+        promptRequestId: res.data.prompt_request_id,
+      } satisfies ParsedSchedule;
     }
 
-    throw new Error(res.data?.human_response || 'ZAID tidak menemukan jadwal yang bisa disimpan.');
+    return {
+      backendSaved: true,
+      response: res.data.human_response || 'Perintah selesai diproses.',
+    } satisfies ParsedSchedule;
   }
 
   async function handleSubmit() {
@@ -374,23 +366,24 @@ export function AiPromptPage() {
 
     try {
       const parsed = await parseSchedule(text, currentAttachments);
-      replaceMessage(thinkingId, {
-        status: 'success',
-        text: buildScheduleSummary(parsed.schedule),
-      });
-      setPendingPromptRequestId(parsed.backendSaved ? null : parsed.promptRequestId || null);
-      setPreviewAlreadySaved(parsed.backendSaved);
+      if (!parsed.schedule) {
+        replaceMessage(thinkingId, { status: 'success', text: parsed.response || 'Perintah selesai diproses.' });
+        await fetchPromptSchedules();
+        return;
+      }
+
+      const schedule = parsed.schedule;
+      const promptRequestId = parsed.promptRequestId;
+      replaceMessage(thinkingId, { status: 'success', text: buildScheduleSummary(schedule) });
+      setPendingPromptRequestId(promptRequestId || null);
+      setPreviewAlreadySaved(false);
 
       if (settings.agendaConfirmationEnabled) {
-        triggerSuccess(() => setPreview(parsed.schedule));
-      } else {
-        await addPromptSchedule(parsed.schedule);
-        appendMessage({
-          id: `saved-${Date.now()}`,
-          role: 'assistant',
-          status: 'success',
-          text: `Disimpan: "${parsed.schedule.title}" ke Kalender.`,
-        });
+        triggerSuccess(() => setPreview(schedule));
+      } else if (promptRequestId) {
+        await extractApi.confirmPrompt(promptRequestId, true);
+        await fetchPromptSchedules();
+        appendMessage({ id: `saved-${Date.now()}`, role: 'assistant', status: 'success', text: `Disimpan: "${schedule.title}" ke Kalender.` });
       }
     } catch (err: any) {
       const apiErrMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
@@ -470,12 +463,9 @@ export function AiPromptPage() {
     try {
       if (pendingPromptRequestId && !Config.useLocalUiData) {
         const confirmation = await extractApi.confirmPrompt(pendingPromptRequestId, true);
-        if (!confirmation.success || !confirmation.data?.result) {
-          throw new Error(confirmation.data?.human_response || 'Konfirmasi prompt gagal.');
-        }
-      }
-
-      if (!previewAlreadySaved) {
+        if (!confirmation.success) throw new Error(confirmation.data?.human_response || 'Konfirmasi prompt gagal.');
+        await fetchPromptSchedules();
+      } else if (!previewAlreadySaved) {
         await addPromptSchedule(preview);
       } else {
         await fetchPromptSchedules();
