@@ -1,4 +1,4 @@
-import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
 import { AuthSuccessNotice, GoogleMark } from '@/src/features/auth/components/AuthShared';
@@ -25,46 +25,59 @@ export function PhoneOtpPage({
   const isDisabled = isLoading || phone.replace(/\D/g, '').length < 8;
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.content, { paddingTop: isCompactHeight ? 58 : 58 }]}>
-        {successMessage ? <AuthSuccessNotice message={successMessage} /> : null}
-        <GoogleMark small />
-        <Text style={styles.title}>OTP Verification</Text>
-        <Text style={styles.copy}>
-          We will send you one-time password{'\n'}to you mobile number
-        </Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <View style={[styles.content, { paddingTop: isCompactHeight ? 58 : 58 }]}>
+          {successMessage ? <AuthSuccessNotice message={successMessage} /> : null}
+          <GoogleMark small />
+          <Text style={styles.title}>OTP Verification</Text>
+          <Text style={styles.copy}>
+            We will send you one-time password{'\n'}to you mobile number
+          </Text>
 
-        <View style={styles.inputWrap}>
-        <TextInput
-          accessibilityLabel="Enter WhatsApp number"
-          keyboardType="phone-pad"
-          maxLength={18}
-          onChangeText={onChangePhone}
-          onSubmitEditing={onGetOtp}
-          placeholder="Enter Mobile Number"
-          placeholderTextColor="#A6AEC4"
-          returnKeyType="send"
-          style={[styles.input, errorMessage ? styles.inputError : null]}
-          value={phone}
-        />
+          <View style={styles.inputWrap}>
+          <TextInput
+            accessibilityLabel="Enter WhatsApp number"
+            keyboardType="phone-pad"
+            maxLength={18}
+            onChangeText={onChangePhone}
+            onSubmitEditing={onGetOtp}
+            placeholder="Enter Mobile Number"
+            placeholderTextColor="#A6AEC4"
+            returnKeyType="send"
+            style={[styles.input, errorMessage ? styles.inputError : null]}
+            value={phone}
+          />
+          </View>
+
+          {errorMessage ? (
+            <Text accessibilityRole="alert" style={styles.errorText}>
+              {errorMessage}
+            </Text>
+          ) : null}
         </View>
 
-        {errorMessage ? (
-          <Text accessibilityRole="alert" style={styles.errorText}>
-            {errorMessage}
-          </Text>
-        ) : null}
-      </View>
-
-      <Button
-        accessibilityLabel="Get OTP"
-        className="self-stretch"
-        disabled={isDisabled}
-        leftIcon={isLoading ? <ActivityIndicator color="#FFFFFF" size="small" /> : undefined}
-        onPress={onGetOtp}>
-        {isLoading ? 'Sending...' : 'Get OTP'}
-      </Button>
-    </View>
+        <View style={styles.buttonContainer}>
+          <Button
+            accessibilityLabel="Get OTP"
+            className="self-stretch"
+            disabled={isDisabled}
+            leftIcon={isLoading ? <ActivityIndicator color="#FFFFFF" size="small" /> : undefined}
+            onPress={onGetOtp}>
+            {isLoading ? 'Sending...' : 'Get OTP'}
+          </Button>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -72,9 +85,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
   content: {
     alignItems: 'center',
-    flex: 1,
+  },
+  buttonContainer: {
+    paddingHorizontal: 0,
+    paddingTop: 16,
   },
   copy: {
     color: '#57575F',

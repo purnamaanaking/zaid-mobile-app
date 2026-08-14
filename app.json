@@ -16,7 +16,7 @@
     "android": {
       "package": "id.zaid.assistant",
       "adaptiveIcon": {
-        "backgroundColor": "#160D20",
+        "backgroundColor": "#665CFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },

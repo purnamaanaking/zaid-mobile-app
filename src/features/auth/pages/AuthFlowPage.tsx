@@ -7,6 +7,7 @@ import { AuthPage } from '@/src/features/auth/pages/AuthPage';
 import { PhoneOtpPage } from '@/src/features/auth/pages/PhoneOtpPage';
 import { OtpVerificationPage } from '@/src/features/auth/pages/OtpVerificationPage';
 import { AuthShell, AuthLayoutMetrics } from '@/src/features/auth/components/AuthShared';
+import { AuthSuccessSplash } from '@/src/features/auth/components/AuthSuccessSplash';
 import { AuthStep } from '@/src/features/auth/types';
 import { initGoogleAuth, signInWithGoogle } from '@/src/services/auth/googleAuth';
 import { setAuthToken } from '@/src/services/storage/token';
@@ -22,6 +23,7 @@ export default function AuthFlowPage() {
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
   const [isOtpRequesting, setOtpRequesting] = useState(false);
   const [phoneError, setPhoneError] = useState('');
+  const [showSuccessSplash, setShowSuccessSplash] = useState(false);
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
 
   const { height, width } = useWindowDimensions();
@@ -46,6 +48,15 @@ export default function AuthFlowPage() {
 
   if (!isInitialized) {
     return null; // Prevent UI flicker
+  }
+
+  if (showSuccessSplash) {
+    return (
+      <AuthSuccessSplash
+        onComplete={() => setShowSuccessSplash(false)}
+        duration={2200}
+      />
+    );
   }
 
   if (isAuthenticated) {
@@ -76,6 +87,7 @@ export default function AuthFlowPage() {
       setAccessToken(access_token);
 
       if (onboarding.next_step === 'dashboard') {
+        setShowSuccessSplash(true);
         await login(access_token, {
           id: backendUser.id,
           email: backendUser.email,
@@ -157,6 +169,7 @@ export default function AuthFlowPage() {
       const res = await authApi.verifyPhoneOtp(verificationId, otpCode);
       if (res.success && res.data && accessToken) {
         const profile = await authApi.getProfile();
+        setShowSuccessSplash(true);
         await login(accessToken, {
           id: profile.data.id,
           email: profile.data.email,
@@ -176,6 +189,7 @@ export default function AuthFlowPage() {
   };
 
   const handleDeveloperSignIn = async () => {
+    setShowSuccessSplash(true);
     await loginAsDeveloper();
   };
 

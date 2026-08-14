@@ -1,6 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useEffect, useRef } from 'react';
-import { Animated, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Fonts } from '@/src/constants/typography';
 
@@ -25,21 +24,12 @@ export function AiPromptComposer({
   onRemoveAttachedFile,
   bottomInset = 0,
 }: AiPromptComposerProps) {
-  const restMargin = bottomInset > 0 ? bottomInset + 12 : 24;
-  const marginAnim = useRef(new Animated.Value(restMargin)).current;
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const onShow = () => Animated.timing(marginAnim, { toValue: 12, duration: 150, useNativeDriver: false }).start();
-    const onHide = () => Animated.timing(marginAnim, { toValue: restMargin, duration: 200, useNativeDriver: false }).start();
-    const s1 = Keyboard.addListener(showEvent, onShow);
-    const s2 = Keyboard.addListener(hideEvent, onHide);
-    return () => { s1.remove(); s2.remove(); };
-  }, [restMargin, marginAnim]);
+  const restMargin = Platform.OS === 'ios'
+    ? (bottomInset > 0 ? bottomInset + 12 : 24)
+    : 12;
 
   return (
-    <Animated.View style={[styles.card, { marginBottom: marginAnim }]}>
+    <View style={[styles.card, { marginBottom: restMargin }]}>
       {/* Render Attached File Badge if present */}
       {attachedFile && (
         <View style={styles.attachmentBadge}>
@@ -90,7 +80,7 @@ export function AiPromptComposer({
           <MaterialIcons name={isProcessing ? 'hourglass-empty' : 'send'} color="#FFFFFF" size={22} />
         </Pressable>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
