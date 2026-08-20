@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 
 import { scheduleWeeklyReminder } from '@/src/services/notifications/nativeNotifications';
 
-export type WeeklyReminderDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+export type { WeekDay as WeeklyReminderDay } from '@/src/utils/reminder';
 export type PreferencesTheme = 'system' | 'light' | 'dark';
 
 export type AppSettings = {
