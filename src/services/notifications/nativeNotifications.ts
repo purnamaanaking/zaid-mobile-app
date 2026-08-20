@@ -2,6 +2,8 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { isValidTime, nextWeeklyTrigger, WeekDay, WEEKDAY_BY_DAY } from '@/src/utils/reminder';
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,
@@ -98,4 +100,33 @@ export async function syncAppReminderNotifications(reminders: AppReminder[]) {
 
 export async function requestReminderPermission() {
   return configureNativeNotifications(true);
+}
+
+export async function scheduleWeeklyReminder(enabled: boolean, day: WeekDay, time: string) {
+  // request permission only when the user turns the reminder ON
+  if (!(await configureNativeNotifications(enabled))) return;
+
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  for (const notification of scheduled) {
+    if (notification.content.data?.kind === 'weekly') {
+      await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+    }
+  }
+  if (!enabled || !isValidTime(time)) return;
+
+  const trigger = nextWeeklyTrigger(day, time);
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Reminder ZAID',
+      body: 'Waktunya cek agenda mingguan kamu.',
+      data: { kind: 'weekly' },
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+      weekday: WEEKDAY_BY_DAY[day],
+      hour: trigger.getHours(),
+      minute: trigger.getMinutes(),
+      channelId: 'reminders',
+    },
+  });
 }
