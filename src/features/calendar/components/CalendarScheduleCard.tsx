@@ -1,12 +1,13 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatShortMonth } from '@/src/features/calendar/utils/date';
 import { PromptSchedule } from '@/src/types/schedule.types';
 import { updatePromptSchedule } from '@/src/features/schedule/store/promptScheduleStore';
 import { ReminderFields } from '@/src/features/reminders/components/ReminderFields';
 import { ReminderChannel } from '@/src/services/api/reminder.api';
+import { validateScheduleFields } from '@/src/utils/scheduleValidation';
 
 type CalendarScheduleCardProps = {
   isEditing: boolean;
@@ -33,10 +34,11 @@ export function CalendarScheduleCard({
   const [draftTitle, setDraftTitle] = useState(schedule.title);
   const [draftDesc, setDraftDesc] = useState(schedule.description || '');
   const [draftDate, setDraftDate] = useState(schedule.date);
+  const [draftEndDate, setDraftEndDate] = useState(schedule.endDate || '');
   const [draftTime, setDraftTime] = useState(schedule.time);
   const [draftEndTime, setDraftEndTime] = useState(schedule.endTime || '');
   const [reminderEnabled, setReminderEnabled] = useState(schedule.reminderEnabled ?? false);
-  const [reminderMinutes, setReminderMinutes] = useState(schedule.reminderMinutes || 30);
+  const [reminderMinutes, setReminderMinutes] = useState(schedule.reminderMinutes ?? 30);
   const [reminderChannel, setReminderChannel] = useState<ReminderChannel>(schedule.reminderChannel ?? 'whatsapp');
 
   // sync draft ketika isEditing berubah dari luar
@@ -45,10 +47,11 @@ export function CalendarScheduleCard({
       setDraftTitle(schedule.title);
       setDraftDesc(schedule.description || '');
       setDraftDate(schedule.date);
+      setDraftEndDate(schedule.endDate || '');
       setDraftTime(schedule.time);
       setDraftEndTime(schedule.endTime || '');
       setReminderEnabled(schedule.reminderEnabled ?? false);
-      setReminderMinutes(schedule.reminderMinutes || 30);
+      setReminderMinutes(schedule.reminderMinutes ?? 30);
       setReminderChannel(schedule.reminderChannel ?? 'whatsapp');
     }
   }, [isEditing, schedule]);
@@ -80,17 +83,40 @@ export function CalendarScheduleCard({
     ]).start();
   }, [fadeAnim, slideAnim]);
 
-  const handleSave = () => {
-    updatePromptSchedule(schedule.id, {
-      title: draftTitle,
-      description: draftDesc,
+  const handleSave = async () => {
+    if (!draftTitle.trim()) {
+      Alert.alert('Periksa input', 'Judul jadwal wajib diisi.');
+      return;
+    }
+
+    const problems = validateScheduleFields({
       date: draftDate,
+      endDate: draftEndDate || undefined,
       time: draftTime,
       endTime: draftEndTime,
-      reminderEnabled,
-      reminderMinutes,
-      reminderChannel,
     });
+
+    if (problems.length) {
+      Alert.alert('Periksa input', problems.join('\n'));
+      return;
+    }
+
+    try {
+      await updatePromptSchedule(schedule.id, {
+        title: draftTitle.trim(),
+        description: draftDesc,
+        date: draftDate,
+        endDate: draftEndDate || undefined,
+        time: draftTime,
+        endTime: draftEndTime,
+        reminderEnabled,
+        reminderMinutes,
+        reminderChannel,
+      });
+    } catch (err: any) {
+      Alert.alert('Gagal menyimpan', err?.message || 'Terjadi kesalahan.');
+      return;
+    }
     onEdit(); // tutup editing
   };
 
@@ -191,11 +217,6 @@ export function CalendarScheduleCard({
           </View>
         )}
 
-        {/* ── Prompt ────────────────────────────────────────────── */}
-        <Text numberOfLines={1} style={styles.promptText}>
-          Prompt: {schedule.sourcePrompt}
-        </Text>
-
         {/* ── Chip waktu & recurring ─────────────────────────────── */}
         <View style={styles.metaRow}>
           <View style={styles.metaChip}>
@@ -247,6 +268,16 @@ export function CalendarScheduleCard({
                 style={styles.textInput}
                 value={draftDate}
                 onChangeText={setDraftDate}
+                placeholder="2026-06-03"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.inputLabel}>Tanggal Selesai</Text>
+              <TextInput
+                style={styles.textInput}
+                value={draftEndDate}
+                onChangeText={setDraftEndDate}
                 placeholder="2026-06-03"
                 placeholderTextColor="#9CA3AF"
               />

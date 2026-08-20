@@ -26,6 +26,8 @@ import { useAuthStore } from '@/src/store/auth.store';
 import { PromptSchedule } from '@/src/types/schedule.types';
 import { useAppTheme } from '@/src/theme/useAppTheme';
 import { useAppSettings } from '@/src/features/settings/store/appSettings.store';
+import { fetchReminders, useReminders } from '@/src/features/reminders/store/reminderStore';
+import { addDays, addOneHour, dateKey, normalizeApiTime } from '@/src/utils/date';
 import ZaidBlackLogo from '@/assets/brand/zaid-black.svg';
 
 type ParsedSchedule = {
@@ -46,13 +48,6 @@ type ChatMessage = {
   text: string;
 };
 
-function dateKey(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
 function parseTitle(text: string): string {
   const lower = text.toLowerCase();
   if (/laporan/.test(lower)) return 'Laporan Penjualan';
@@ -66,28 +61,11 @@ function parseTitle(text: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-function normalizeApiTime(value?: string | null): string {
-  if (!value) return '09:00';
-  const [hour = '09', minute = '00'] = value.split(':');
-  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
-}
-
-function addOneHour(time: string): string {
-  const [h, m] = normalizeApiTime(time).split(':').map(Number);
-  return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
 function getInitials(name?: string | null, email?: string | null) {
   const source = (name || email || 'ZAID').trim();
   const words = source.split(/\s+/).filter(Boolean);
   if (words.length >= 2) return `${words[0][0]}${words[1][0]}`.toUpperCase();
   return source.slice(0, 2).toUpperCase();
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(date.getDate() + days);
-  return next;
 }
 
 function parseLocalDate(text: string): string {
@@ -178,12 +156,13 @@ function taskToSchedule(task: any, sourcePrompt: string): PromptSchedule {
     userId: 'current-user',
     title: task.title || parseTitle(sourcePrompt),
     date: task.scheduled_date || dateKey(now),
+    endDate: task.scheduled_end_date || undefined,
     time,
-    endTime: addOneHour(time),
+    endTime: task.scheduled_end_time ? normalizeApiTime(task.scheduled_end_time) : addOneHour(time),
     location: task.location || 'ZAID',
     description: task.description || '',
-    reminderMinutes: task.reminder_minutes_before || 30,
-    reminderEnabled: Boolean(task.reminder_minutes_before),
+    reminderMinutes: task.reminder_minutes_before ?? 30,
+    reminderEnabled: task.reminder_minutes_before != null,
     reminderChannel: task.reminder_channel || 'whatsapp',
     recurring: task.recurrence?.type || 'none',
     sourcePrompt,
@@ -207,18 +186,18 @@ export function AiPromptPage() {
   const { user } = useAuthStore();
   const theme = useAppTheme();
   const { settings } = useAppSettings();
+  const { reminders } = useReminders();
   const scrollRef = useRef<ScrollView | null>(null);
   const drawerX = useRef(new Animated.Value(-300)).current;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [preview, setPreview] = useState<PromptSchedule | null>(null);
   const [attachedFile, setAttachedFile] = useState<{ name: string; type: string } | null>(null);
   const [attachments, setAttachments] = useState<PromptAttachment[] | null>(null);
-  const [pendingPromptRequestId, setPendingPromptRequestId] = useState<string | null>(null);
-  const [previewAlreadySaved, setPreviewAlreadySaved] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -239,6 +218,20 @@ export function AiPromptPage() {
     return 'Lampirkan dokumen/gambar atau tulis pesan jadwal';
   }, [attachedFile, isProcessing]);
   const userInitials = getInitials(user?.full_name, user?.email);
+
+  const notifications = useMemo(() => {
+    const now = Date.now();
+    return reminders
+      .filter((reminder) => reminder.status === 'pending' && new Date(reminder.remind_at).getTime() > now)
+      .sort((a, b) => new Date(a.remind_at).getTime() - new Date(b.remind_at).getTime())
+      .slice(0, 3);
+  }, [reminders]);
+
+  useEffect(() => {
+    fetchReminders().catch((err) => {
+      console.warn('Failed to fetch reminders for notifications', err);
+    });
+  }, []);
 
   useEffect(() => {
     if (!isProcessing) return;
@@ -375,14 +368,15 @@ export function AiPromptPage() {
       const schedule = parsed.schedule;
       const promptRequestId = parsed.promptRequestId;
       replaceMessage(thinkingId, { status: 'success', text: buildScheduleSummary(schedule) });
-      setPendingPromptRequestId(promptRequestId || null);
-      setPreviewAlreadySaved(false);
 
       if (settings.agendaConfirmationEnabled) {
         triggerSuccess(() => setPreview(schedule));
       } else if (promptRequestId) {
         await extractApi.confirmPrompt(promptRequestId, true);
         await fetchPromptSchedules();
+        appendMessage({ id: `saved-${Date.now()}`, role: 'assistant', status: 'success', text: `Disimpan: "${schedule.title}" ke Kalender.` });
+      } else {
+        await addPromptSchedule(schedule);
         appendMessage({ id: `saved-${Date.now()}`, role: 'assistant', status: 'success', text: `Disimpan: "${schedule.title}" ke Kalender.` });
       }
     } catch (err: any) {
@@ -461,22 +455,12 @@ export function AiPromptPage() {
     if (!preview) return;
 
     try {
-      if (pendingPromptRequestId && !Config.useLocalUiData) {
-        const confirmation = await extractApi.confirmPrompt(pendingPromptRequestId, true);
-        if (!confirmation.success) throw new Error(confirmation.data?.human_response || 'Konfirmasi prompt gagal.');
-        await fetchPromptSchedules();
-      } else if (!previewAlreadySaved) {
-        await addPromptSchedule(preview);
-      } else {
-        await fetchPromptSchedules();
-      }
+      await addPromptSchedule(preview);
     } catch (err: any) {
       Alert.alert('Gagal menyimpan', err.response?.data?.message || err.message || 'Coba lagi.');
       return;
     }
 
-    setPendingPromptRequestId(null);
-    setPreviewAlreadySaved(false);
     appendMessage({
       id: `saved-${Date.now()}`,
       role: 'assistant',
@@ -495,10 +479,10 @@ export function AiPromptPage() {
         style={StyleSheet.absoluteFill}
       />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
         style={{ flex: 1 }}>
-        <View style={styles.header}>
+        <View style={styles.header} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
           <Pressable
             accessibilityLabel="Open menu"
             accessibilityRole="button"
@@ -515,31 +499,40 @@ export function AiPromptPage() {
             onPress={() => setNotifOpen((v) => !v)}
             style={({ pressed }) => [styles.iconButton, pressed ? styles.buttonPressed : null]}>
             <MaterialIcons name="notifications-none" color={theme.text} size={24} />
-            <View style={styles.notifBadge} />
+            {notifications.length > 0 ? <View style={styles.notifBadge} /> : null}
           </Pressable>
         </View>
 
         {notifOpen ? (
           <>
             <Pressable style={styles.notifBackdrop} onPress={() => setNotifOpen(false)} />
-            <View style={[styles.notifDropdown, { top: insets.top + 68 }]}>
+            <View style={[styles.notifDropdown, { top: insets.top + (headerHeight || 68) }]}>
               <Text style={styles.notifDropdownTitle}>Notifikasi</Text>
-              <View style={styles.notifItem}>
-                <MaterialIcons name="event" color="#665CFF" size={20} />
-                <View style={styles.notifItemText}>
-                  <Text style={styles.notifItemTitle}>Agenda besok</Text>
-                  <Text style={styles.notifItemSub}>Kamu punya 2 jadwal besok</Text>
+              {notifications.length > 0 ? (
+                notifications.map((reminder) => (
+                  <View key={reminder.id} style={styles.notifItem}>
+                    <MaterialIcons name="event" color="#665CFF" size={20} />
+                    <View style={styles.notifItemText}>
+                      <Text style={styles.notifItemTitle}>
+                        {reminder.task?.title || reminder.calendar_event?.title || 'Pengingat jadwal'}
+                      </Text>
+                      <Text style={styles.notifItemSub}>
+                        {new Date(reminder.remind_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.notifItem}>
+                  <MaterialIcons name="notifications-none" color="#9CA3AF" size={20} />
+                  <View style={styles.notifItemText}>
+                    <Text style={styles.notifItemTitle}>Tidak ada pengingat</Text>
+                    <Text style={styles.notifItemSub}>Belum ada agenda yang diingatkan.</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.notifItem}>
-                <MaterialIcons name="notifications-active" color="#F59E0B" size={20} />
-                <View style={styles.notifItemText}>
-                  <Text style={styles.notifItemTitle}>Weekly reminder</Text>
-                  <Text style={styles.notifItemSub}>Cek agenda minggu ini</Text>
-                </View>
-              </View>
+              )}
               <Pressable
-                onPress={() => { setNotifOpen(false); router.push('/(app)/settings-notifications' as any); }}
+                onPress={() => { setNotifOpen(false); router.push('/(app)/settings-notifications'); }}
                 style={styles.notifFooter}>
                 <Text style={styles.notifFooterText}>Pengaturan notifikasi</Text>
               </Pressable>
@@ -661,7 +654,9 @@ export function AiPromptPage() {
           onChangeSchedule={(patch) =>
             setPreview((current) => (current ? { ...current, ...patch } : current))
           }
-          onClose={() => setPreview(null)}
+          onClose={() => {
+            setPreview(null);
+          }}
           onSave={handleSave}
           schedule={preview}
           visible={Boolean(preview)}

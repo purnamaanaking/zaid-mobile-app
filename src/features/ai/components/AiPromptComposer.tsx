@@ -24,9 +24,9 @@ export function AiPromptComposer({
   onRemoveAttachedFile,
   bottomInset = 0,
 }: AiPromptComposerProps) {
-  const restMargin = Platform.OS === 'ios'
-    ? (bottomInset > 0 ? bottomInset + 12 : 24)
-    : 12;
+  const restMargin = bottomInset > 0
+    ? bottomInset + 12
+    : (Platform.OS === 'ios' ? 24 : 12);
 
   return (
     <View style={[styles.card, { marginBottom: restMargin }]}>

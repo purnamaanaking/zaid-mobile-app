@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Keyboard,
   KeyboardAvoidingView,
@@ -20,6 +21,7 @@ import { formatFullDate } from '@/src/features/calendar/utils/date';
 import { PromptSchedule } from '@/src/types/schedule.types';
 import { ReminderFields } from '@/src/features/reminders/components/ReminderFields';
 import { ReminderChannel } from '@/src/services/api/reminder.api';
+import { validateScheduleFields } from '@/src/utils/scheduleValidation';
 
 type CalendarTaskSheetProps = {
   editingScheduleId: string | null;
@@ -122,6 +124,18 @@ export function CalendarTaskSheet({
 
   function handleSaveManualSchedule() {
     if (!startDate || !draftTitle.trim()) return;
+
+    const problems = validateScheduleFields({
+      date: startDate,
+      endDate: endDate && endDate !== startDate ? endDate : undefined,
+      time: draftTime,
+      endTime: draftEndTime,
+    });
+
+    if (problems.length) {
+      Alert.alert('Periksa input', problems.join('\n'));
+      return;
+    }
 
     const now = new Date();
     const schedule: PromptSchedule = {
@@ -295,7 +309,7 @@ export function CalendarTaskSheet({
               schedules.map((schedule) => (
                 <CalendarScheduleCard
                   isEditing={editingScheduleId === schedule.id}
-                  key={`${schedule.id}-${editingScheduleId === schedule.id}`}
+                  key={schedule.id}
                   onDelete={() => onDeleteSchedule(schedule.id)}
                   onEdit={() => onEditSchedule(schedule.id)}
                   schedule={schedule}

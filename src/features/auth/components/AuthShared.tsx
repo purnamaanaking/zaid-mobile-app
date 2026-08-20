@@ -11,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ZaidWordmark from '@/assets/brand/zaid-black.svg';
 
@@ -31,6 +32,12 @@ type AuthShellProps = {
 
 export function AuthShell({ children, metrics }: AuthShellProps) {
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const insets = useSafeAreaInsets();
+  const compactWordmarkTop = Math.max(insets.top + 10, 56);
+  const keyboardQuoteHeight = Math.max(
+    compactWordmarkTop + (metrics.isCompactHeight ? 48 : 64),
+    metrics.isCompactHeight ? 108 : 128,
+  );
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -56,7 +63,7 @@ export function AuthShell({ children, metrics }: AuthShellProps) {
           start={{ x: 0.5, y: 0 }}
           style={[
             styles.quoteSection,
-            { height: isKeyboardVisible ? (metrics.isCompactHeight ? 182 : 214) : metrics.quoteHeight },
+            { height: isKeyboardVisible ? keyboardQuoteHeight : metrics.quoteHeight },
           ]}>
           {!isKeyboardVisible ? (
             <>
@@ -69,7 +76,12 @@ export function AuthShell({ children, metrics }: AuthShellProps) {
               </View>
             </>
           ) : (
-            <ZaidWordmark accessibilityLabel="ZAID" height={16} style={styles.wordmarkCompact} width={54} />
+            <ZaidWordmark
+              accessibilityLabel="ZAID"
+              height={16}
+              style={[styles.wordmarkCompact, { marginTop: compactWordmarkTop }]}
+              width={54}
+            />
           )}
         </LinearGradient>
 

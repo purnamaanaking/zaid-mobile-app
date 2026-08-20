@@ -4,6 +4,7 @@ import { Config } from '@/src/constants/config';
 import { buildPromptSchedules } from '@/src/features/schedule/data/promptSchedules';
 import { scheduleApi } from '@/src/services/api/schedule.api';
 import { deleteReminder, fetchReminders, remindersForEvent, saveReminder, updateReminder } from '@/src/features/reminders/store/reminderStore';
+import { addOneHour, normalizeApiTime } from '@/src/utils/date';
 
 let schedules: PromptSchedule[] = [];
 let isLoading = false;
@@ -23,21 +24,10 @@ function subscribe(listener: () => void) {
   };
 }
 
-function normalizeApiTime(value?: string | null): string {
-  if (!value) return '09:00';
-  const [hour = '09', minute = '00'] = value.split(':');
-  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
-}
-
 function toApiTime(value?: string | null): string | null {
   if (!value) return null;
   const normalized = normalizeApiTime(value);
   return normalized.length === 5 ? `${normalized}:00` : normalized;
-}
-
-function addOneHour(time: string): string {
-  const [h, m] = normalizeApiTime(time).split(':').map(Number);
-  return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 function applyReminderState(schedule: PromptSchedule): PromptSchedule {
@@ -94,15 +84,18 @@ export async function fetchPromptSchedules() {
     if (res.success && res.data && res.data.items) {
       schedules = res.data.items.map((item) => {
         const time = normalizeApiTime(item.scheduled_time);
+        const endTime = item.scheduled_end_time
+          ? normalizeApiTime(item.scheduled_end_time)
+          : addOneHour(time);
 
         return {
           id: item.id,
           userId: 'user-1',
           title: item.title,
           date: item.scheduled_date || new Date().toISOString().slice(0, 10),
-          endDate: item.scheduled_date || undefined,
+          endDate: item.scheduled_end_date || item.scheduled_date || undefined,
           time,
-          endTime: addOneHour(time),
+          endTime,
           location: 'Google Calendar & Tasks',
           description: item.description || '',
           reminderMinutes: remindersForEvent(item.id).find((reminder) => reminder.status === 'pending')?.minutes_before ?? 30,
@@ -164,6 +157,8 @@ export async function addPromptSchedule(schedule: PromptSchedule) {
       description: schedule.description || '',
       scheduled_date: schedule.date,
       scheduled_time: toApiTime(schedule.time),
+      scheduled_end_date: schedule.endDate || schedule.date,
+      scheduled_end_time: toApiTime(schedule.endTime) ?? toApiTime(addOneHour(schedule.time)),
       all_day: false,
       recurrence: schedule.recurring && schedule.recurring !== 'none'
         ? { type: schedule.recurring, interval: 1 }
@@ -267,6 +262,8 @@ export async function updatePromptSchedule(scheduleId: string, patch: Partial<Pr
       description: patch.description,
       scheduled_date: patch.date,
       scheduled_time: toApiTime(patch.time),
+      scheduled_end_date: patch.endDate || patch.date,
+      scheduled_end_time: toApiTime(patch.endTime),
     };
     await scheduleApi.updateTask(scheduleId, payload);
     const existingReminder = remindersForEvent(scheduleId).find((item) => item.status === 'pending');

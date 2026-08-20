@@ -17,6 +17,10 @@ export type PromptEntityResponse = {
   description?: string;
   scheduled_date?: string; // YYYY-MM-DD
   scheduled_time?: string; // HH:mm
+  scheduled_end_date?: string; // YYYY-MM-DD
+  scheduled_end_time?: string; // HH:mm
+  reminder_minutes_before?: number;
+  reminder_channel?: 'whatsapp' | 'app' | 'both';
   recurrence?: {
     type: 'daily' | 'weekly' | 'monthly';
     interval?: number;

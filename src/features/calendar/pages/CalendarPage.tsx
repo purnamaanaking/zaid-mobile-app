@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -25,7 +25,7 @@ import { useAppTheme } from '@/src/theme/useAppTheme';
 export function CalendarPage() {
   const router = useRouter();
   const theme = useAppTheme();
-  const today = useMemo(() => new Date(), []);
+  const [today, setToday] = useState(() => new Date());
   const [monthDate, setMonthDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [startDate, setStartDate] = useState<string | null>(dateKey(today));
   const [endDate, setEndDate] = useState<string | null>(dateKey(today));
@@ -40,6 +40,13 @@ export function CalendarPage() {
   useEffect(() => {
     fetchPromptSchedules();
   }, []);
+
+  useEffect(() => {
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+    const timer = setTimeout(() => setToday(new Date()), nextMidnight.getTime() - now.getTime() + 1000);
+    return () => clearTimeout(timer);
+  }, [today]);
 
   useEffect(() => {
     const from = dateKey(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1));
@@ -62,8 +69,11 @@ export function CalendarPage() {
         }
       }
     });
+    events.forEach((event) => {
+      if (event.starts_at) dates.add(dateKey(new Date(event.starts_at)));
+    });
     return dates;
-  }, [schedules]);
+  }, [schedules, events]);
 
   const visibleSchedules = useMemo(() => {
     const todayKey = dateKey(today);
@@ -78,7 +88,7 @@ export function CalendarPage() {
 
       if (activeFilter === 'upcoming') {
         const sEnd = schedule.endDate || schedule.date;
-        return sEnd > todayKey;
+        return sEnd >= todayKey;
       }
 
       if (startDate && endDate) {
@@ -95,43 +105,47 @@ export function CalendarPage() {
   }, [activeFilter, schedules, startDate, endDate, today]);
 
   const visibleEvents = useMemo(() => events.filter((event) => {
-    const eventDate = event.starts_at?.slice(0, 10);
+    const eventDate = event.starts_at ? dateKey(new Date(event.starts_at)) : null;
     if (!eventDate) return false;
     if (startDate && endDate) return eventDate >= startDate && eventDate <= endDate;
     return eventDate === (startDate || dateKey(today));
   }), [endDate, events, startDate, today]);
 
   const selectedDateLabel = useMemo(() => {
+    if (activeFilter === 'upcoming') return 'Upcoming';
     return startDate ? formatSelectedDateLabel(startDate, endDate) : formatSelectedDateLabel(dateKey(today));
-  }, [endDate, startDate, today]);
+  }, [activeFilter, endDate, startDate, today]);
 
-  function syncMonthToDate(value: string) {
+  const syncMonthToDate = useCallback((value: string) => {
     const selected = new Date(`${value}T00:00:00`);
 
-    if (selected.getMonth() !== monthDate.getMonth() || selected.getFullYear() !== monthDate.getFullYear()) {
-      setMonthDate(new Date(selected.getFullYear(), selected.getMonth(), 1));
-    }
-  }
+    setMonthDate((current) => {
+      if (selected.getMonth() !== current.getMonth() || selected.getFullYear() !== current.getFullYear()) {
+        return new Date(selected.getFullYear(), selected.getMonth(), 1);
+      }
+      return current;
+    });
+  }, []);
 
-  function handleRangeChange(rangeStart: string, rangeEnd: string) {
+  const handleRangeChange = useCallback((rangeStart: string, rangeEnd: string) => {
     syncMonthToDate(rangeStart);
     setStartDate(rangeStart);
     setEndDate(rangeEnd);
     setActiveFilter('recent');
-  }
+  }, [syncMonthToDate]);
 
-  function handleRangeComplete(rangeStart: string, rangeEnd: string) {
+  const handleRangeComplete = useCallback((rangeStart: string, rangeEnd: string) => {
     handleRangeChange(rangeStart, rangeEnd);
     setTaskSheetVisible(true);
-  }
+  }, [handleRangeChange]);
 
-  function handleTap(date: string) {
+  const handleTap = useCallback((date: string) => {
     syncMonthToDate(date);
     setStartDate(date);
     setEndDate(date);
     setActiveFilter('recent');
     setTaskSheetVisible(true);
-  }
+  }, [syncMonthToDate]);
 
   function handleJumpToday() {
     const todayKey = dateKey(today);
@@ -167,7 +181,9 @@ export function CalendarPage() {
   }
 
   function handleAddManualSchedule(schedule: PromptSchedule) {
-    addPromptSchedule(schedule);
+    void addPromptSchedule(schedule).catch((err: any) => {
+      Alert.alert('Gagal menyimpan', err?.message || 'Terjadi kesalahan.');
+    });
   }
 
   return (
@@ -251,7 +267,7 @@ export function CalendarPage() {
               visibleSchedules.map((schedule) => (
                 <CalendarScheduleCard
                   isEditing={editingScheduleId === schedule.id}
-                  key={`${schedule.id}-${editingScheduleId === schedule.id}`}
+                  key={schedule.id}
                   onDelete={() => handleDelete(schedule.id)}
                   onEdit={() => handleEdit(schedule.id)}
                   schedule={schedule}

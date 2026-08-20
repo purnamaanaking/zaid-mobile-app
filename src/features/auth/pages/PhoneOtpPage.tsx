@@ -1,4 +1,4 @@
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
 import { AuthSuccessNotice, GoogleMark } from '@/src/features/auth/components/AuthShared';
@@ -25,26 +25,21 @@ export function PhoneOtpPage({
   const isDisabled = isLoading || phone.replace(/\D/g, '').length < 8;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    <ScrollView
+      bounces={false}
+      contentContainerStyle={[styles.scrollContent, { paddingTop: isCompactHeight ? 36 : 58 }]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        <View style={[styles.content, { paddingTop: isCompactHeight ? 58 : 58 }]}>
-          {successMessage ? <AuthSuccessNotice message={successMessage} /> : null}
-          <GoogleMark small />
-          <Text style={styles.title}>OTP Verification</Text>
-          <Text style={styles.copy}>
-            We will send you one-time password{'\n'}to you mobile number
-          </Text>
+      <View style={styles.content}>
+        {successMessage ? <AuthSuccessNotice message={successMessage} /> : null}
+        <GoogleMark small />
+        <Text style={styles.title}>OTP Verification</Text>
+        <Text style={styles.copy}>
+          We will send you one-time password{'\n'}to your mobile number
+        </Text>
 
-          <View style={styles.inputWrap}>
+        <View style={styles.inputWrap}>
           <TextInput
             accessibilityLabel="Enter WhatsApp number"
             keyboardType="phone-pad"
@@ -57,14 +52,13 @@ export function PhoneOtpPage({
             style={[styles.input, errorMessage ? styles.inputError : null]}
             value={phone}
           />
-          </View>
-
-          {errorMessage ? (
-            <Text accessibilityRole="alert" style={styles.errorText}>
-              {errorMessage}
-            </Text>
-          ) : null}
         </View>
+
+        {errorMessage ? (
+          <Text accessibilityRole="alert" style={styles.errorText}>
+            {errorMessage}
+          </Text>
+        ) : null}
 
         <View style={styles.buttonContainer}>
           <Button
@@ -76,25 +70,22 @@ export function PhoneOtpPage({
             {isLoading ? 'Sending...' : 'Get OTP'}
           </Button>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 28,
   },
   content: {
     alignItems: 'center',
   },
   buttonContainer: {
-    paddingHorizontal: 0,
-    paddingTop: 16,
+    marginTop: 32,
+    width: '100%',
   },
   copy: {
     color: '#57575F',

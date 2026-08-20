@@ -1,10 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from 'react-native';
+import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from 'react-native';
 
 import { RecurringOption } from '@/src/features/ai/types';
 import { PromptSchedule } from '@/src/types/schedule.types';
 import { ReminderFields } from '@/src/features/reminders/components/ReminderFields';
+import { validateScheduleFields } from '@/src/utils/scheduleValidation';
 
 const RECURRING_OPTIONS: { label: string; value: RecurringOption }[] = [
   { label: 'No Repeat', value: 'none' },
@@ -44,6 +45,16 @@ export function SchedulePreviewModal({
       hideListener.remove();
     };
   }, [visible]);
+
+  function handleSavePress() {
+    if (!schedule) return;
+    const problems = validateScheduleFields(schedule);
+    if (problems.length) {
+      Alert.alert('Periksa input', problems.join('\n'));
+      return;
+    }
+    onSave();
+  }
 
   if (!schedule) {
     return null;
@@ -186,7 +197,7 @@ export function SchedulePreviewModal({
               <Pressable accessibilityRole="button" onPress={onClose} style={styles.secondaryButton}>
                 <Text style={styles.secondaryText}>Edit Later</Text>
               </Pressable>
-              <Pressable accessibilityRole="button" onPress={onSave} style={styles.primaryButton}>
+              <Pressable accessibilityRole="button" onPress={handleSavePress} style={styles.primaryButton}>
                 <MaterialIcons name="check-circle" color="#FFFFFF" size={16} style={{ marginRight: 6 }} />
                 <Text style={styles.primaryText}>Save Schedule</Text>
               </Pressable>

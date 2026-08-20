@@ -1,14 +1,9 @@
 import { CalendarDay } from '@/src/features/calendar/types';
+import { dateKey } from '@/src/utils/date';
 
 export const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export function dateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
+export { dateKey };
 
 export function monthTitle(date: Date) {
   return new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date);

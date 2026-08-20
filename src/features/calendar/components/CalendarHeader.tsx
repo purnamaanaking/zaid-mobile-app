@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { monthTitle } from '@/src/features/calendar/utils/date';
+import { monthTitle, yearTitle } from '@/src/features/calendar/utils/date';
 
 type CalendarHeaderProps = {
   monthDate: Date;
@@ -15,6 +15,7 @@ export function CalendarHeader({ monthDate, onNextMonth, onPreviousMonth, onToda
     <View style={styles.header}>
       <View style={styles.titleRow}>
         <Text style={styles.month}>{monthTitle(monthDate)}</Text>
+        <Text style={styles.year}>{yearTitle(monthDate)}</Text>
       </View>
       <View style={styles.actions}>
         <Pressable
@@ -64,6 +65,11 @@ const styles = StyleSheet.create({
   month: {
     color: '#111827',
     fontSize: 24,
+    fontWeight: '600',
+  },
+  year: {
+    color: '#98A1B5',
+    fontSize: 16,
     fontWeight: '600',
   },
   titleRow: {

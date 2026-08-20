@@ -14,6 +14,8 @@ export type TaskResource = {
   status: 'pending' | 'active' | 'completed' | 'cancelled';
   scheduled_date: string | null;
   scheduled_time: string | null;
+  scheduled_end_date: string | null;
+  scheduled_end_time: string | null;
   timezone: string;
   all_day: boolean;
   is_recurring: boolean;
@@ -53,21 +55,46 @@ export type CreateTaskPayload = {
   description?: string | null;
   scheduled_date?: string | null;
   scheduled_time?: string | null;
+  scheduled_end_date?: string | null;
+  scheduled_end_time?: string | null;
   timezone?: string | null;
   all_day?: boolean | null;
   recurrence?: TaskRecurrence | null;
 };
 export type UpdateTaskPayload = Partial<CreateTaskPayload>;
 
+function localDateTimeParts(value: string | null) {
+  if (!value) return { date: null, time: null };
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return { date: null, time: null };
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  const second = String(date.getSeconds()).padStart(2, '0');
+
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hour}:${minute}:${second}`,
+  };
+}
+
 function taskFromEvent(event: EventResource): TaskResource {
-  const startsAt = event.starts_at ?? '';
+  const startsAt = localDateTimeParts(event.starts_at);
+  const endsAt = localDateTimeParts(event.ends_at);
+
   return {
     id: event.id,
     title: event.title,
     description: event.description,
     status: event.status === 'completed' ? 'completed' : event.status === 'cancelled' ? 'cancelled' : 'active',
-    scheduled_date: startsAt.slice(0, 10) || null,
-    scheduled_time: startsAt.slice(11, 19) || null,
+    scheduled_date: startsAt.date,
+    scheduled_time: startsAt.time,
+    scheduled_end_date: endsAt.date,
+    scheduled_end_time: endsAt.time,
     timezone: event.timezone,
     all_day: event.all_day,
     is_recurring: Boolean(event.recurrence),
@@ -84,6 +111,8 @@ function taskFromEvent(event: EventResource): TaskResource {
 function eventPayload(payload: CreateTaskPayload | UpdateTaskPayload) {
   const date = payload.scheduled_date;
   const time = payload.scheduled_time ?? '09:00:00';
+  const endDate = payload.scheduled_end_date ?? date;
+  const endTime = payload.scheduled_end_time ?? null;
   return {
     title: payload.title,
     description: payload.description,
@@ -91,6 +120,7 @@ function eventPayload(payload: CreateTaskPayload | UpdateTaskPayload) {
     all_day: payload.all_day ?? false,
     recurrence: payload.recurrence,
     ...(date ? { starts_at: `${date}T${time}` } : {}),
+    ...(endDate && endTime ? { ends_at: `${endDate}T${endTime}` } : {}),
   };
 }
 
