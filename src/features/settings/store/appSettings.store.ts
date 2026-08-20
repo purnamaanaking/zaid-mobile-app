@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
+import { scheduleWeeklyReminder } from '@/src/services/notifications/nativeNotifications';
+
 export type WeeklyReminderDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 export type PreferencesTheme = 'system' | 'light' | 'dark';
 
@@ -60,6 +62,7 @@ export async function loadAppSettings() {
   } finally {
     initialized = true;
     emit();
+    void scheduleWeeklyReminder(settings.weeklyReminderEnabled, settings.weeklyReminderDay, settings.weeklyReminderTime);
   }
 }
 
@@ -73,4 +76,6 @@ export async function updateAppSettings(patch: Partial<AppSettings>) {
   } catch (error) {
     console.warn('Could not save app settings', error);
   }
+
+  void scheduleWeeklyReminder(settings.weeklyReminderEnabled, settings.weeklyReminderDay, settings.weeklyReminderTime);
 }
