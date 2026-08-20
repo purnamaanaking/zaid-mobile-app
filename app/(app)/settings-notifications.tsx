@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAppSettings, WeeklyReminderDay } from '@/src/features/settings/store/appSettings.store';
+import { useAppSettings } from '@/src/features/settings/store/appSettings.store';
+import { isValidTime } from '@/src/utils/reminder';
 
 const DAYS: { label: string; value: WeeklyReminderDay }[] = [
   { label: 'Sen', value: 'monday' },
@@ -43,7 +44,10 @@ export default function NotificationSettingsRoute() {
               </View>
               <Switch
                 enabled={settings.weeklyReminderEnabled}
-                onPress={() => updateAppSettings({ weeklyReminderEnabled: !settings.weeklyReminderEnabled })}
+                onPress={() => {
+                  if (!settings.weeklyReminderEnabled && !isValidTime(settings.weeklyReminderTime)) return;
+                  updateAppSettings({ weeklyReminderEnabled: !settings.weeklyReminderEnabled });
+                }}
               />
             </View>
 
