@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
 import { scheduleWeeklyReminder } from '@/src/services/notifications/nativeNotifications';
+import type { WeekDay as WeeklyReminderDay } from '@/src/utils/reminder';
 
 export type { WeekDay as WeeklyReminderDay } from '@/src/utils/reminder';
 export type PreferencesTheme = 'system' | 'light' | 'dark';
