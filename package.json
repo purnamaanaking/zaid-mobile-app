@@ -11,7 +11,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --test src/utils/reminder.test.ts"
+    "test": "node --test src/utils/reminder.test.ts src/features/auth/auth-flow.test.ts"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.1",

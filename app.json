@@ -4,7 +4,7 @@
     "slug": "zaid-mobile-app",
     "version": "1.2.1",
     "orientation": "portrait",
-    "owner": "zhacksdev",
+    "owner": "arioveisa",
     "icon": "./assets/brand/zaid-icon.png",
     "scheme": "zaidmobileapp",
     "userInterfaceStyle": "automatic",
@@ -60,14 +60,11 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5206dfec-5b01-42fe-9df4-13ae25fd3069"
+        "projectId": "74882b10-fbb9-40dc-a321-37f89f19eccb"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/5206dfec-5b01-42fe-9df4-13ae25fd3069"
     }
   }
 }
