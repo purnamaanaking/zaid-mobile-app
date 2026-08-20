@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAppSettings } from '@/src/features/settings/store/appSettings.store';
+import { useAppSettings, type WeeklyReminderDay } from '@/src/features/settings/store/appSettings.store';
 import { isValidTime } from '@/src/utils/reminder';
 
 const DAYS: { label: string; value: WeeklyReminderDay }[] = [
