@@ -11,7 +11,7 @@ export function EventCard({ event, onDelete }: { event: EventResource; onDelete:
       <View style={styles.content}>
         <Text numberOfLines={1} style={styles.title}>{event.title}</Text>
         <Text style={styles.meta}>{start ? start.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : 'Tanpa waktu'}</Text>
-        {event.reminders?.length ? <Text style={styles.reminder}>{event.reminders.length} reminder</Text> : null}
+        {event.reminders?.length ? <Text style={styles.reminder}>{event.reminders.length} pengingat</Text> : null}
       </View>
       <Pressable accessibilityLabel={`Hapus event ${event.title}`} onPress={onDelete} style={styles.delete}>
         <MaterialIcons name="delete-outline" color="#EF4444" size={20} />

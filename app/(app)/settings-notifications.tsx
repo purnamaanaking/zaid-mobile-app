@@ -38,7 +38,7 @@ export default function NotificationSettingsRoute() {
           <View style={styles.card}>
             <View style={styles.row}>
               <View style={styles.rowText}>
-                <Text style={styles.cardTitle}>Weekly reminder</Text>
+                <Text style={styles.cardTitle}>Pengingat mingguan</Text>
                 <Text style={styles.cardSubtitle}>Pengingat mingguan untuk cek agenda.</Text>
               </View>
               <Switch
@@ -59,7 +59,7 @@ export default function NotificationSettingsRoute() {
               ))}
             </View>
 
-            <Text style={styles.label}>Jam reminder</Text>
+            <Text style={styles.label}>Jam pengingat</Text>
             <TextInput
               keyboardType="numbers-and-punctuation"
               onChangeText={(weeklyReminderTime) => updateAppSettings({ weeklyReminderTime })}

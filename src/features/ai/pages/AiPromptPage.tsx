@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,6 +43,7 @@ type ChatMessage = {
   attachment?: {
     name: string;
     type: string;
+    uri?: string;
   } | null;
   id: string;
   role: 'assistant' | 'user';
@@ -172,11 +175,40 @@ function taskToSchedule(task: any, sourcePrompt: string): PromptSchedule {
   };
 }
 
-function buildScheduleSummary(schedule: PromptSchedule) {
-  const dateText = schedule.endDate && schedule.endDate !== schedule.date
-    ? `${schedule.date} - ${schedule.endDate}`
-    : schedule.date;
+function formatScheduleDate(value: string, formatter: Intl.DateTimeFormat) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return value || 'tanggal belum terisi';
 
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return value;
+  }
+
+  return formatter.format(date);
+}
+
+function buildScheduleSummary(schedule: PromptSchedule) {
+  const formatter = new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const start = formatScheduleDate(schedule.date, formatter);
+  const end = schedule.endDate && schedule.endDate !== schedule.date
+    ? formatScheduleDate(schedule.endDate, formatter)
+    : null;
+
+  const dateText = end ? `${start} - ${end}` : start;
   return `Saya menemukan jadwal: ${schedule.title} pada ${dateText} pukul ${schedule.time}. Tinjau detail sebelum menyimpan.`;
 }
 
@@ -192,11 +224,12 @@ export function AiPromptPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [preview, setPreview] = useState<PromptSchedule | null>(null);
-  const [attachedFile, setAttachedFile] = useState<{ name: string; type: string } | null>(null);
+  const [attachedFile, setAttachedFile] = useState<{ name: string; type: string; uri?: string } | null>(null);
   const [attachments, setAttachments] = useState<PromptAttachment[] | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -231,6 +264,20 @@ export function AiPromptPage() {
     fetchReminders().catch((err) => {
       console.warn('Failed to fetch reminders for notifications', err);
     });
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') return;
+    const show = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -368,6 +415,7 @@ export function AiPromptPage() {
       const schedule = parsed.schedule;
       const promptRequestId = parsed.promptRequestId;
       replaceMessage(thinkingId, { status: 'success', text: buildScheduleSummary(schedule) });
+      Keyboard.dismiss();
 
       if (settings.agendaConfirmationEnabled) {
         triggerSuccess(() => setPreview(schedule));
@@ -410,7 +458,7 @@ export function AiPromptPage() {
       }
 
       if (Config.useLocalUiData) {
-        setAttachedFile({ name: asset.name, type: asset.mimeType || 'document' });
+        setAttachedFile({ name: asset.name, type: asset.mimeType || 'document', uri: asset.uri });
         setAttachments([{
           type: 'image',
           url: asset.uri,
@@ -430,7 +478,7 @@ export function AiPromptPage() {
         );
 
         if (uploadRes.success && uploadRes.data) {
-          setAttachedFile({ name: asset.name, type: asset.mimeType || 'document' });
+          setAttachedFile({ name: asset.name, type: asset.mimeType || 'document', uri: uploadRes.data.url });
           setAttachments([{
             type: 'image',
             url: uploadRes.data.url,
@@ -473,7 +521,7 @@ export function AiPromptPage() {
   return (
     <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: theme.bgSecondary }}>
       <LinearGradient
-        colors={theme.isDark ? ['#12141C', '#1A1D27', '#0F1117'] : ['#F5F3FF', '#F8FAFC', '#FFFFFF']}
+        colors={theme.isDark ? ['#212121', '#1C1C1C', '#171717'] : ['#F5F3FF', '#F8FAFC', '#FFFFFF']}
         end={{ x: 0, y: 1 }}
         start={{ x: 0, y: 0 }}
         style={StyleSheet.absoluteFill}
@@ -484,7 +532,7 @@ export function AiPromptPage() {
         style={{ flex: 1 }}>
         <View style={styles.header} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
           <Pressable
-            accessibilityLabel="Open menu"
+            accessibilityLabel="Buka menu"
             accessibilityRole="button"
             onPress={toggleDrawer}
             style={({ pressed }) => [styles.iconButton, pressed ? styles.buttonPressed : null]}>
@@ -636,19 +684,21 @@ export function AiPromptPage() {
           <Text numberOfLines={1} style={styles.statusText}>{statusText}</Text>
         </View>
 
-        <AiPromptComposer
-          attachedFile={attachedFile}
-          bottomInset={insets.bottom}
-          isProcessing={isProcessing}
-          onAttachFile={handleFilePick}
-          onChangePrompt={setPrompt}
-          onRemoveAttachedFile={() => {
-            setAttachedFile(null);
-            setAttachments(null);
-          }}
-          onSubmit={handleSubmit}
-          prompt={prompt}
-        />
+        <View style={{ paddingBottom: keyboardHeight }}>
+          <AiPromptComposer
+            attachedFile={attachedFile}
+            bottomInset={insets.bottom}
+            isProcessing={isProcessing}
+            onAttachFile={handleFilePick}
+            onChangePrompt={setPrompt}
+            onRemoveAttachedFile={() => {
+              setAttachedFile(null);
+              setAttachments(null);
+            }}
+            onSubmit={handleSubmit}
+            prompt={prompt}
+          />
+        </View>
 
         <SchedulePreviewModal
           onChangeSchedule={(patch) =>
@@ -678,6 +728,7 @@ function ChatBubble({
   message: ChatMessage;
 }) {
   const isUser = message.role === 'user';
+  const isImageAttachment = message.attachment?.type.startsWith('image/') && message.attachment.uri;
 
   return (
     <View style={[styles.messageRow, isUser ? styles.messageRowUser : null]}>
@@ -688,13 +739,23 @@ function ChatBubble({
       ) : null}
       <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
         {message.attachment ? (
-          <View style={styles.messageAttachment}>
-            <MaterialIcons
-              color={message.attachment.type.startsWith('image/') ? '#3B82F6' : '#665CFF'}
-              name={message.attachment.type.startsWith('image/') ? 'image' : 'insert-drive-file'}
-              size={16}
-            />
-            <Text numberOfLines={1} style={styles.messageAttachmentText}>{message.attachment.name}</Text>
+          <View style={styles.messageAttachmentWrap}>
+            {isImageAttachment ? (
+              <Image
+                accessibilityLabel={`Pratinjau ${message.attachment.name}`}
+                contentFit="cover"
+                source={{ uri: message.attachment.uri }}
+                style={styles.messageAttachmentImage}
+              />
+            ) : null}
+            <View style={styles.messageAttachment}>
+              <MaterialIcons
+                color={message.attachment.type.startsWith('image/') ? '#3B82F6' : '#665CFF'}
+                name={message.attachment.type.startsWith('image/') ? 'image' : 'insert-drive-file'}
+                size={16}
+              />
+              <Text numberOfLines={1} style={styles.messageAttachmentText}>{message.attachment.name}</Text>
+            </View>
           </View>
         ) : null}
 
@@ -999,12 +1060,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 6,
   },
+  messageAttachmentImage: {
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 12,
+    height: 146,
+    width: '100%',
+  },
   messageAttachmentText: {
     color: '#374151',
     flexShrink: 1,
     fontFamily: Fonts.bodyRegular,
     fontSize: 12,
     lineHeight: 18,
+  },
+  messageAttachmentWrap: {
+    marginBottom: 8,
+    maxWidth: 260,
+    minWidth: 210,
   },
   messageRow: {
     alignItems: 'flex-start',

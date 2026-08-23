@@ -112,7 +112,7 @@ export function CalendarPage() {
   }), [endDate, events, startDate, today]);
 
   const selectedDateLabel = useMemo(() => {
-    if (activeFilter === 'upcoming') return 'Upcoming';
+    if (activeFilter === 'upcoming') return 'Mendatang';
     return startDate ? formatSelectedDateLabel(startDate, endDate) : formatSelectedDateLabel(dateKey(today));
   }, [activeFilter, endDate, startDate, today]);
 

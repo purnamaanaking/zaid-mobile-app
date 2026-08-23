@@ -3,9 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { NotificationFilter } from '@/src/features/notifications/types';
 
 const FILTERS: { label: string; value: NotificationFilter; activeColor: string; dotColor: string }[] = [
-  { label: 'All',      value: 'all',      activeColor: '#665CFF', dotColor: '#9992FF' },
-  { label: 'Today',    value: 'today',    activeColor: '#EF4444', dotColor: '#FCA5A5' },
-  { label: 'Upcoming', value: 'upcoming', activeColor: '#D97706', dotColor: '#FCD34D' },
+  { label: 'Semua',      value: 'all',      activeColor: '#665CFF', dotColor: '#9992FF' },
+  { label: 'Hari Ini',    value: 'today',    activeColor: '#EF4444', dotColor: '#FCA5A5' },
+  { label: 'Mendatang', value: 'upcoming', activeColor: '#D97706', dotColor: '#FCD34D' },
 ];
 
 export function NotificationFilterBar({
@@ -22,7 +22,7 @@ export function NotificationFilterBar({
 
         return (
           <Pressable
-            accessibilityLabel={`Filter notifications ${filter.label}`}
+            accessibilityLabel={`Filter notifikasi ${filter.label}`}
             accessibilityRole="button"
             key={filter.value}
             onPress={() => onChangeFilter(filter.value)}

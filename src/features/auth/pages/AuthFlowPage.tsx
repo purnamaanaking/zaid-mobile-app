@@ -24,6 +24,7 @@ export default function AuthFlowPage() {
   const [isOtpRequesting, setOtpRequesting] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [showSuccessSplash, setShowSuccessSplash] = useState(false);
+  const [developerMode, setDeveloperMode] = useState(false);
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
 
   const { height, width } = useWindowDimensions();
@@ -65,7 +66,7 @@ export default function AuthFlowPage() {
 
   const completeGoogleLogin = async (idToken: string | null) => {
     if (!idToken || idToken === 'mock-google-id-token') {
-      Alert.alert('Error', 'Google sign-in did not return a valid token. Please choose a Google account first.');
+      Alert.alert('Kesalahan', 'Masuk Google tidak mengembalikan token yang valid. Pilih akun Google terlebih dahulu.');
       return;
     }
 
@@ -76,7 +77,7 @@ export default function AuthFlowPage() {
       });
 
       if (!res.success || !res.data) {
-        Alert.alert('Error', 'Google authentication failed. Please try again.');
+        Alert.alert('Kesalahan', 'Autentikasi Google gagal. Coba lagi.');
         return;
       }
 
@@ -105,7 +106,7 @@ export default function AuthFlowPage() {
       }
     } catch (err: any) {
       console.warn('Google backend authentication failed', err);
-      Alert.alert('Google Sign-in Failed', err.response?.data?.message || err.message || 'Please choose a Google account and try again.');
+      Alert.alert('Masuk Google Gagal', err.response?.data?.message || err.message || 'Pilih akun Google dan coba lagi.');
     }
   };
 
@@ -115,7 +116,7 @@ export default function AuthFlowPage() {
       await completeGoogleLogin(idToken);
     } catch (err: any) {
       console.warn('Google Sign-in failed', err);
-      Alert.alert('Google Sign-in Failed', err.response?.data?.message || err.message || 'Please choose a Google account and try again.');
+      Alert.alert('Masuk Google Gagal', err.response?.data?.message || err.message || 'Pilih akun Google dan coba lagi.');
     }
   };
 
@@ -124,7 +125,15 @@ export default function AuthFlowPage() {
 
     const cleanedPhone = phone.replace(/[^0-9+]/g, '');
     if (cleanedPhone.replace(/\D/g, '').length < 8) {
-      Alert.alert('Error', 'Please enter a valid WhatsApp phone number.');
+      Alert.alert('Kesalahan', 'Masukkan nomor WhatsApp yang valid.');
+      return;
+    }
+
+    if (developerMode) {
+      setPhone(cleanedPhone);
+      setVerificationId('dev-verification-id');
+      setOtp(['', '', '', '', '', '']);
+      setStep('otp');
       return;
     }
 
@@ -138,13 +147,13 @@ export default function AuthFlowPage() {
         setOtp(['', '', '', '', '', '']);
         setStep('otp');
       } else {
-        Alert.alert('Error', 'Failed to send OTP. Please try again.');
+        Alert.alert('Kesalahan', 'Gagal mengirim OTP. Coba lagi.');
       }
     } catch (err: any) {
       const validationMessage = err.response?.data?.errors
         ? Object.values(err.response.data.errors).flat().join('\n')
         : null;
-      const message = validationMessage || err.response?.data?.message || 'Failed to send OTP. Please try again.';
+      const message = validationMessage || err.response?.data?.message || 'Gagal mengirim OTP. Coba lagi.';
       const friendlyMessage = message.toLowerCase().includes('already linked')
         ? 'Nomor WhatsApp ini sudah dipakai di akun lain. Gunakan nomor lain atau login dengan akun Google pemilik nomor tersebut.'
         : message;
@@ -158,12 +167,17 @@ export default function AuthFlowPage() {
   const handleVerifyOtp = async () => {
     const otpCode = otp.join('');
     if (otpCode.length < 6) {
-      Alert.alert('Error', 'Please enter the 6-digit code');
+      Alert.alert('Kesalahan', 'Masukkan kode 6 digit');
+      return;
+    }
+    if (developerMode) {
+      setShowSuccessSplash(true);
+      await loginAsDeveloper();
       return;
     }
     try {
       if (!verificationId) {
-        Alert.alert('Error', 'Please request an OTP first.');
+        Alert.alert('Kesalahan', 'Minta OTP terlebih dahulu.');
         return;
       }
       const res = await authApi.verifyPhoneOtp(verificationId, otpCode);
@@ -180,31 +194,36 @@ export default function AuthFlowPage() {
           status: profile.data.status,
         });
       } else {
-        Alert.alert('Error', 'OTP verification failed. Please try again.');
+        Alert.alert('Kesalahan', 'Verifikasi OTP gagal. Coba lagi.');
       }
     } catch (err: any) {
       console.warn('API OTP verification failed', err);
-      Alert.alert('Error', err.response?.data?.message || 'OTP is invalid or expired. Please try again.');
+      Alert.alert('Kesalahan', err.response?.data?.message || 'OTP tidak valid atau kedaluwarsa. Coba lagi.');
     }
   };
 
-  const handleDeveloperSignIn = async () => {
-    setShowSuccessSplash(true);
-    await loginAsDeveloper();
+  const handleDeveloperSignIn = () => {
+    setDeveloperMode(true);
+    setStep('phone');
   };
 
   const handleResendOtp = async () => {
+    if (developerMode) {
+      setVerificationId('dev-verification-id');
+      Alert.alert('Berhasil', 'Kode verifikasi telah dikirim ulang ke nomor HP-mu.');
+      return;
+    }
     try {
       const res = await authApi.resendPhoneOtp(phone);
       if (res.success && res.data?.verification_id) {
         setVerificationId(res.data.verification_id);
-        Alert.alert('Success', 'Verification code has been resent to your mobile number.');
+        Alert.alert('Berhasil', 'Kode verifikasi telah dikirim ulang ke nomor HP-mu.');
       } else {
-        Alert.alert('Error', 'Could not resend OTP. Please try again.');
+        Alert.alert('Kesalahan', 'Tidak bisa mengirim ulang OTP. Coba lagi.');
       }
     } catch (err: any) {
       console.warn('API OTP resend failed', err);
-      Alert.alert('Error', err.response?.data?.message || 'Could not resend OTP. Please try again.');
+      Alert.alert('Kesalahan', err.response?.data?.message || 'Tidak bisa mengirim ulang OTP. Coba lagi.');
     }
   };
 

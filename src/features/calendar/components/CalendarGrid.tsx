@@ -141,7 +141,7 @@ export function CalendarGrid({
 
           return (
             <Pressable
-              accessibilityLabel={`Select date ${day.dateKey}`}
+              accessibilityLabel={`Pilih tanggal ${day.dateKey}`}
               accessibilityRole="button"
               key={day.dateKey}
               onPress={() => onTap(day.dateKey)}

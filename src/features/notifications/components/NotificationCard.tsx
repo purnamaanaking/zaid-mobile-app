@@ -10,14 +10,14 @@ type NotificationCardProps = {
 
 function reminderLabel(minutes: number) {
   if (minutes >= 1440) {
-    return '1 day before';
+    return '1 hari sebelumnya';
   }
 
   if (minutes >= 60) {
-    return `${minutes / 60} hour before`;
+    return `${minutes / 60} jam sebelumnya`;
   }
 
-  return `${minutes} min`;
+  return `${minutes} menit`;
 }
 
 export function NotificationCard({ reminderMinutes, schedule }: NotificationCardProps) {
@@ -29,11 +29,11 @@ export function NotificationCard({ reminderMinutes, schedule }: NotificationCard
       </View>
       <View style={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>Reminder</Text>
+          <Text style={styles.title}>Pengingat</Text>
           <Text style={styles.timeText}>{reminderLabel(reminderMinutes)}</Text>
         </View>
         <Text style={styles.body}>
-          {schedule.title} starts at {schedule.time}. {schedule.description}
+          {schedule.title} dimulai pukul {schedule.time}. {schedule.description}
         </Text>
       </View>
     </View>

@@ -14,16 +14,16 @@ export function AuthDonePage({ onContinue }: AuthDonePageProps) {
         <MaterialIcons name="check" size={44} color="#7379FF" />
       </View>
       <Text className="mt-[26px] text-center text-[22px] font-semibold text-[#56575C]">
-        You are all set
+        Semua sudah siap
       </Text>
       <Text className="mt-2.5 text-center text-[15px] leading-[22px] text-[#57575F]">
-        Google Calendar and Tasks are ready to sync with ZAID.
+        Google Calendar dan Tasks siap disinkronkan dengan ZAID.
       </Text>
       <Button
-        accessibilityLabel="Back to welcome"
+        accessibilityLabel="Kembali ke halaman awal"
         className="mt-auto self-stretch"
         onPress={onContinue}>
-        Continue
+        Lanjutkan
       </Button>
     </View>
   );

@@ -127,7 +127,7 @@ export function AuthSuccessSplash({ onComplete, duration = 2200 }: AuthSuccessSp
             { opacity: wordmarkOpacity }
           ]}
         >
-          Welcome to ZAID
+          Selamat datang di ZAID
         </Animated.Text>
       </View>
     </Animated.View>

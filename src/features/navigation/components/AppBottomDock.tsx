@@ -15,8 +15,8 @@ const TAB_ITEMS: {
   label: string;
   route: Href;
 }[] = [
-  { icon: 'calendar-month', key: 'schedule', label: 'Schedule', route: '/explore' },
-  { icon: 'person', key: 'profile', label: 'Profile', route: '/profile' as Href },
+  { icon: 'calendar-month', key: 'schedule', label: 'Jadwal', route: '/explore' },
+  { icon: 'person', key: 'profile', label: 'Profil', route: '/profile' as Href },
 ];
 
 export function AppBottomDock({ activeTab }: AppBottomDockProps) {
@@ -113,7 +113,7 @@ export function AppBottomDock({ activeTab }: AppBottomDockProps) {
         ))}
       </View>
       <Pressable
-        accessibilityLabel="Create schedule from AI prompt"
+        accessibilityLabel="Buat jadwal dari prompt AI"
         accessibilityRole="button"
         onPress={() => router.push('/ai' as Href)}
         style={styles.fab}>

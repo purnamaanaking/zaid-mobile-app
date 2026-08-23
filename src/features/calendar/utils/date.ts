@@ -6,7 +6,7 @@ export const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export { dateKey };
 
 export function monthTitle(date: Date) {
-  return new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date);
+  return new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(date);
 }
 
 export function yearTitle(date: Date) {
@@ -36,13 +36,13 @@ export function buildCalendarDays(monthDate: Date): CalendarDay[] {
 }
 
 export function formatShortMonth(value: string) {
-  return new Intl.DateTimeFormat('en-US', { month: 'short' })
+  return new Intl.DateTimeFormat('id-ID', { month: 'short' })
     .format(new Date(`${value}T00:00:00`))
     .toUpperCase();
 }
 
 export function formatFullDate(value: string) {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
     month: 'short',
     weekday: 'short',
@@ -54,7 +54,7 @@ export function formatSelectedDateLabel(value: string, endValue?: string | null)
   const start = new Date(`${value}T00:00:00`);
 
   if (!endValue || endValue === value) {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat('id-ID', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
@@ -65,18 +65,18 @@ export function formatSelectedDateLabel(value: string, endValue?: string | null)
   const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
 
   if (sameMonth) {
-    const monthYear = new Intl.DateTimeFormat('en-US', {
+    const monthYear = new Intl.DateTimeFormat('id-ID', {
       month: 'long',
       year: 'numeric',
     }).format(start);
     return `${start.getDate()} - ${end.getDate()} ${monthYear}`;
   }
 
-  return `${new Intl.DateTimeFormat('en-US', {
+  return `${new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }).format(start)} - ${new Intl.DateTimeFormat('en-US', {
+  }).format(start)} - ${new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

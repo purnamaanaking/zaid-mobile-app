@@ -16,20 +16,20 @@ export function GoogleConnectPage({ isCompactHeight, onAllowAccess }: GoogleConn
         <MaterialIcons name="event-available" size={38} color="#7379FF" />
       </View>
       <Text className="mt-[26px] text-center text-[22px] font-semibold text-[#56575C]">
-        Connect Google
+        Hubungkan Google
       </Text>
       <Text className="mt-2.5 text-center text-[15px] leading-[22px] text-[#57575F]">
-        Allow ZAID to connect Google Calendar and Google Tasks for reminders.
+        Izinkan ZAID menghubungkan Google Calendar dan Google Tasks untuk pengingat.
       </Text>
       <View className="self-stretch gap-3" style={{ marginTop: isCompactHeight ? 30 : 46 }}>
         <PermissionItem icon="calendar-month" label="Google Calendar" />
         <PermissionItem icon="task-alt" label="Google Tasks" />
       </View>
       <Button
-        accessibilityLabel="Connect Google Calendar and Tasks"
+        accessibilityLabel="Hubungkan Google Calendar dan Tasks"
         className="mt-10 self-stretch"
         onPress={onAllowAccess}>
-        Allow Access
+        Izinkan Akses
       </Button>
     </View>
   );

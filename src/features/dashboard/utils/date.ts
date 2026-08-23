@@ -1,4 +1,4 @@
-export const DAY_LABELS = ['SUN', 'MON', 'TUES', 'WED', 'THURS', 'FRI', 'SAT'];
+export const DAY_LABELS = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
 
 export { addDays, dateKey } from '@/src/utils/date';
 
@@ -25,7 +25,7 @@ export function buildMonthDays(referenceDate: Date) {
 
 export function formatReadableDate(value: string, endValue?: string) {
   const startDate = new Date(`${value}T00:00:00`);
-  const startStr = new Intl.DateTimeFormat('en-US', {
+  const startStr = new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
     month: 'long',
     weekday: 'long',
@@ -36,7 +36,7 @@ export function formatReadableDate(value: string, endValue?: string) {
   }
 
   const endDate = new Date(`${endValue}T00:00:00`);
-  const endStr = new Intl.DateTimeFormat('en-US', {
+  const endStr = new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
     month: 'long',
   }).format(endDate);

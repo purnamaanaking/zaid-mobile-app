@@ -34,19 +34,19 @@ export function PhoneOtpPage({
       <View style={styles.content}>
         {successMessage ? <AuthSuccessNotice message={successMessage} /> : null}
         <GoogleMark small />
-        <Text style={styles.title}>OTP Verification</Text>
+        <Text style={styles.title}>Verifikasi OTP</Text>
         <Text style={styles.copy}>
-          We will send you one-time password{'\n'}to your mobile number
+          Kami akan mengirim kode sekali pakai{'\n'}ke nomor HP-mu
         </Text>
 
         <View style={styles.inputWrap}>
           <TextInput
-            accessibilityLabel="Enter WhatsApp number"
+            accessibilityLabel="Masukkan nomor WhatsApp"
             keyboardType="phone-pad"
             maxLength={18}
             onChangeText={onChangePhone}
             onSubmitEditing={onGetOtp}
-            placeholder="Enter Mobile Number"
+            placeholder="Masukkan Nomor HP"
             placeholderTextColor="#A6AEC4"
             returnKeyType="send"
             style={[styles.input, errorMessage ? styles.inputError : null]}
@@ -62,12 +62,12 @@ export function PhoneOtpPage({
 
         <View style={styles.buttonContainer}>
           <Button
-            accessibilityLabel="Get OTP"
+            accessibilityLabel="Kirim OTP"
             className="self-stretch"
             disabled={isDisabled}
             leftIcon={isLoading ? <ActivityIndicator color="#FFFFFF" size="small" /> : undefined}
             onPress={onGetOtp}>
-            {isLoading ? 'Sending...' : 'Get OTP'}
+            {isLoading ? 'Mengirim...' : 'Kirim OTP'}
           </Button>
         </View>
       </View>

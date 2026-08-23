@@ -56,9 +56,9 @@ export function AuthPage({
         <GoogleMark />
       </View>
 
-      <Text style={styles.heading}>Continue with Google</Text>
+      <Text style={styles.heading}>Lanjutkan dengan Google</Text>
       <Text style={styles.subtitle}>
-        Choose your Google account first. Phone verification is locked until Google sign-in succeeds.
+        Pilih akun Google dulu. Verifikasi nomor terkunci sampai masuk Google berhasil.
       </Text>
 
       <View style={styles.buttonRow}>
@@ -76,25 +76,25 @@ export function AuthPage({
             />
             {!webButtonReady && (
               <Button
-                accessibilityLabel="Continue with Google"
+                accessibilityLabel="Lanjutkan dengan Google"
                 className="self-stretch rounded-full"
                 leftIcon={<GoogleMark small />}
                 onPress={onGoogleSignIn}
                 textClassName="font-semibold text-[#56575C]"
                 variant="outline">
-                Open Google Sign-In
+                Buka Google Sign-In
               </Button>
             )}
           </>
         ) : (
           <Button
-            accessibilityLabel="Continue with Google"
+            accessibilityLabel="Lanjutkan dengan Google"
             className="self-stretch rounded-full"
             leftIcon={<GoogleMark small />}
             onPress={onGoogleSignIn}
             textClassName="font-semibold text-[#56575C]"
             variant="outline">
-            Sign in with Google
+            Masuk dengan Google
           </Button>
         )}
       </View>
@@ -102,18 +102,18 @@ export function AuthPage({
       {enableDeveloperSignIn ? (
         <>
           <Button
-            accessibilityLabel="Developer sign in"
+            accessibilityLabel="Masuk Mode Developer"
             className="mt-3 self-stretch"
             onPress={onDeveloperSignIn}
             textClassName="text-[#6268FF]"
             variant="ghost">
-            Developer Sign In
+            Masuk Mode Developer
           </Button>
-          <Text style={styles.developerCopy}>Preview the app without Google authentication.</Text>
+          <Text style={styles.developerCopy}>Pratinjau aplikasi tanpa autentikasi Google.</Text>
         </>
       ) : null}
 
-      <Text style={styles.footer}>Sign in with Google to continue to phone verification.</Text>
+      <Text style={styles.footer}>Masuk dengan Google untuk lanjut ke verifikasi nomor.</Text>
     </View>
   );
 }

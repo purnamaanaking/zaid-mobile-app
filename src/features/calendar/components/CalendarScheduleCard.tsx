@@ -40,6 +40,7 @@ export function CalendarScheduleCard({
   const [reminderEnabled, setReminderEnabled] = useState(schedule.reminderEnabled ?? false);
   const [reminderMinutes, setReminderMinutes] = useState(schedule.reminderMinutes ?? 30);
   const [reminderChannel, setReminderChannel] = useState<ReminderChannel>(schedule.reminderChannel ?? 'whatsapp');
+  const [formHeight, setFormHeight] = useState(0);
 
   // sync draft ketika isEditing berubah dari luar
   useEffect(() => {
@@ -137,7 +138,7 @@ export function CalendarScheduleCard({
   // interpolasi tinggi dropdown form
   const formMaxHeight = dropdownAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 500],
+    outputRange: [0, Math.max(formHeight, 1)],
   });
   const formOpacity = dropdownAnim.interpolate({
     inputRange: [0, 0.4, 1],
@@ -186,13 +187,17 @@ export function CalendarScheduleCard({
 
           {/* Tombol titik tiga */}
           <Pressable
-            accessibilityLabel="More options"
+            accessibilityLabel="Opsi lainnya"
             accessibilityRole="button"
             onPress={() => setMenuOpen((v) => !v)}
             style={styles.moreButton}>
             <MaterialIcons name="more-vert" color="#9AA5B8" size={20} />
           </Pressable>
         </View>
+
+        {schedule.description ? (
+          <Text numberOfLines={2} style={styles.description}>{schedule.description}</Text>
+        ) : null}
 
         {/* ── Context menu (muncul saat titik tiga ditekan) ─────── */}
         {menuOpen && (
@@ -207,7 +212,7 @@ export function CalendarScheduleCard({
             </Pressable>
             <View style={styles.contextMenuDivider} />
             <Pressable
-              accessibilityLabel={`Delete ${schedule.title}`}
+              accessibilityLabel={`Hapus ${schedule.title}`}
               accessibilityRole="button"
               onPress={handleMenuDelete}
               style={styles.contextMenuItem}>
@@ -227,15 +232,16 @@ export function CalendarScheduleCard({
           </View>
           <View style={styles.metaChip}>
             <MaterialIcons name="sync" color="#FFFFFF" size={13} />
-            <Text style={styles.metaText}>No Recurring</Text>
+            <Text style={styles.metaText}>Tanpa Pengulangan</Text>
           </View>
         </View>
 
         {/* ── Dropdown form edit (animasi expand ke bawah) ────────── */}
         <Animated.View style={[styles.editDropdown, { maxHeight: formMaxHeight, opacity: formOpacity }]}>
+          <View onLayout={(e) => setFormHeight(e.nativeEvent.layout.height)}>
           <View style={styles.editDivider} />
 
-          <Text style={styles.editSectionLabel}>Edit Schedule</Text>
+          <Text style={styles.editSectionLabel}>Edit Jadwal</Text>
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Judul</Text>
@@ -243,7 +249,7 @@ export function CalendarScheduleCard({
               style={styles.textInput}
               value={draftTitle}
               onChangeText={setDraftTitle}
-              placeholder="Schedule title"
+              placeholder="Judul jadwal"
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -254,7 +260,7 @@ export function CalendarScheduleCard({
               style={[styles.textInput, styles.textArea]}
               value={draftDesc}
               onChangeText={setDraftDesc}
-              placeholder="Add description"
+              placeholder="Tambahkan deskripsi"
               placeholderTextColor="#9CA3AF"
               multiline
               numberOfLines={2}
@@ -318,7 +324,7 @@ export function CalendarScheduleCard({
 
           <View style={styles.formActions}>
             <Pressable
-              accessibilityLabel="Cancel editing"
+              accessibilityLabel="Batalkan edit"
               accessibilityRole="button"
               onPress={onEdit}
               style={[styles.btnAction, styles.btnCancel]}>
@@ -326,13 +332,14 @@ export function CalendarScheduleCard({
               <Text style={styles.btnCancelText}>Batal</Text>
             </Pressable>
             <Pressable
-              accessibilityLabel="Save schedule changes"
+              accessibilityLabel="Simpan perubahan jadwal"
               accessibilityRole="button"
               onPress={handleSave}
               style={[styles.btnAction, styles.btnSave]}>
               <MaterialIcons name="check" color="#FFFFFF" size={16} />
               <Text style={styles.btnSaveText}>Simpan</Text>
             </Pressable>
+          </View>
           </View>
         </Animated.View>
       </View>
@@ -393,6 +400,12 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  description: {
+    color: '#6B7280',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 6,
   },
 
   // ── tanggal horizontal ────────────────────────────────────────────

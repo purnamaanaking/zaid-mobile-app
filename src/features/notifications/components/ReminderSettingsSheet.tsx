@@ -19,17 +19,17 @@ export function ReminderSettingsSheet({
 }: ReminderSettingsSheetProps) {
   return (
     <Modal animationType="fade" transparent visible={visible}>
-      <Pressable accessibilityLabel="Close reminder settings" onPress={onClose} style={styles.backdrop}>
+      <Pressable accessibilityLabel="Tutup pengaturan pengingat" onPress={onClose} style={styles.backdrop}>
         <Pressable style={styles.sheet}>
-          <Text style={styles.title}>Reminder Settings</Text>
-          <Text style={styles.subtitle}>Choose when ZAID should remind you before a schedule starts.</Text>
+          <Text style={styles.title}>Pengaturan Pengingat</Text>
+          <Text style={styles.subtitle}>Pilih kapan ZAID mengingatkanmu sebelum jadwal dimulai.</Text>
           <View style={styles.options}>
             {options.map((option) => {
               const active = option.minutes === selectedMinutes;
 
               return (
                 <Pressable
-                  accessibilityLabel={`Set reminder ${option.label}`}
+                  accessibilityLabel={`Atur pengingat ${option.label}`}
                   accessibilityRole="button"
                   key={option.minutes}
                   onPress={() => onSelectReminder(option.minutes)}
@@ -39,8 +39,8 @@ export function ReminderSettingsSheet({
                   </Text>
                   <Text style={[styles.optionMeta, active ? styles.optionTextActive : null]}>
                     {option.minutes >= 1440
-                      ? 'Best for important schedules'
-                      : 'Good for daily tasks'}
+                      ? 'Cocok untuk jadwal penting'
+                      : 'Cocok untuk tugas harian'}
                   </Text>
                 </Pressable>
               );

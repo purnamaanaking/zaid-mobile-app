@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Fonts } from '@/src/constants/typography';
@@ -9,7 +10,7 @@ type AiPromptComposerProps = {
   onChangePrompt: (value: string) => void;
   onSubmit: () => void;
   prompt: string;
-  attachedFile: { name: string; type: string } | null;
+  attachedFile: { name: string; type: string; uri?: string } | null;
   onRemoveAttachedFile: () => void;
   bottomInset?: number;
 };
@@ -33,16 +34,20 @@ export function AiPromptComposer({
       {/* Render Attached File Badge if present */}
       {attachedFile && (
         <View style={styles.attachmentBadge}>
-          <MaterialIcons
-            name={attachedFile.type.includes('pdf') ? 'picture-as-pdf' : attachedFile.type.startsWith('image/') ? 'insert-photo' : 'insert-drive-file'}
-            color={attachedFile.type.includes('pdf') ? '#EF4444' : attachedFile.type.startsWith('image/') ? '#3B82F6' : '#6B7280'}
-            size={18}
-          />
+          {attachedFile.uri && attachedFile.type.startsWith('image/') ? (
+            <Image source={{ uri: attachedFile.uri }} style={styles.attachmentThumb} />
+          ) : (
+            <MaterialIcons
+              name={attachedFile.type.includes('pdf') ? 'picture-as-pdf' : attachedFile.type.startsWith('image/') ? 'insert-photo' : 'insert-drive-file'}
+              color={attachedFile.type.includes('pdf') ? '#EF4444' : attachedFile.type.startsWith('image/') ? '#3B82F6' : '#6B7280'}
+              size={18}
+            />
+          )}
           <Text numberOfLines={1} style={styles.attachmentText}>
             {attachedFile.name}
           </Text>
           <Pressable
-            accessibilityLabel="Remove file attachment"
+            accessibilityLabel="Hapus lampiran file"
             accessibilityRole="button"
             onPress={onRemoveAttachedFile}
             style={styles.removeAttachmentButton}>
@@ -53,23 +58,23 @@ export function AiPromptComposer({
 
       <View style={styles.actionRow}>
         <Pressable
-          accessibilityLabel="Attach schedule file"
+          accessibilityLabel="Lampirkan file jadwal"
           accessibilityRole="button"
           onPress={onAttachFile}
           style={styles.iconButton}>
           <MaterialIcons name="attach-file" color="#665CFF" size={27} />
         </Pressable>
         <TextInput
-          accessibilityLabel="Prompt schedule text"
+          accessibilityLabel="Teks perintah jadwal"
           multiline
           onChangeText={onChangePrompt}
-          placeholder="Message ZAID AI..."
+          placeholder="Tulis pesan ke ZAID AI..."
           placeholderTextColor="#8A93A5"
           style={styles.input}
           value={prompt}
         />
         <Pressable
-          accessibilityLabel="Send AI prompt"
+          accessibilityLabel="Kirim pesan AI"
           accessibilityRole="button"
           disabled={isProcessing || (!prompt.trim() && !attachedFile)}
           onPress={onSubmit}
@@ -153,6 +158,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     flexShrink: 1,
+  },
+  attachmentThumb: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
   },
   removeAttachmentButton: {
     padding: 2,

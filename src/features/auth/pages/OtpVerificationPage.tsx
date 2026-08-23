@@ -39,14 +39,14 @@ export function OtpVerificationPage({
     >
       <View style={styles.content}>
         <GoogleMark small />
-        <Text style={styles.title}>OTP Verification</Text>
+        <Text style={styles.title}>Verifikasi OTP</Text>
         <Text style={styles.copy}>
-          Enter the OTP sent to <Text className="font-semibold text-[#3E3E44]">{maskedPhone}</Text>
+          Masukkan OTP yang dikirim ke <Text className="font-semibold text-[#3E3E44]">{maskedPhone}</Text>
         </Text>
         <View style={[styles.otpRow, { marginTop: isCompactHeight ? 36 : 56 }]}>
           {otp.map((digit, index) => (
             <TextInput
-              accessibilityLabel={`OTP digit ${index + 1}`}
+              accessibilityLabel={`Digit OTP ${index + 1}`}
               key={index}
               keyboardType="number-pad"
               maxLength={1}
@@ -68,20 +68,20 @@ export function OtpVerificationPage({
           ))}
         </View>
         <View style={styles.resendRow}>
-          <Text style={styles.resendText}>{"Didn't you receive the OTP? "}</Text>
-          <Pressable accessibilityLabel="Resend OTP" accessibilityRole="button" onPress={onResendOtp}>
-            <Text style={styles.resendLink}>Resend OTP</Text>
+          <Text style={styles.resendText}>{"Belum menerima OTP? "}</Text>
+          <Pressable accessibilityLabel="Kirim Ulang OTP" accessibilityRole="button" onPress={onResendOtp}>
+            <Text style={styles.resendLink}>Kirim Ulang OTP</Text>
           </Pressable>
         </View>
 
         <View style={styles.buttonContainer}>
           <Button
-            accessibilityLabel="Verify OTP"
+            accessibilityLabel="Verifikasi OTP"
             className="self-stretch"
             disabled={isDisabled}
             leftIcon={isLoading ? <ActivityIndicator color="#FFFFFF" size="small" /> : undefined}
             onPress={onVerify}>
-            {isLoading ? 'Verifying...' : 'Verify'}
+            {isLoading ? 'Memverifikasi...' : 'Verifikasi'}
           </Button>
         </View>
       </View>
@@ -111,10 +111,11 @@ const styles = StyleSheet.create({
   otpInput: {
     borderBottomWidth: 1,
     color: '#34343A',
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: '600',
     height: 42,
     includeFontPadding: false,
+    lineHeight: 24,
     textAlign: 'center',
     textAlignVertical: 'center',
   },

@@ -32,6 +32,7 @@ type AuthShellProps = {
 
 export function AuthShell({ children, metrics }: AuthShellProps) {
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const insets = useSafeAreaInsets();
   const compactWordmarkTop = Math.max(insets.top + 10, 56);
   const keyboardQuoteHeight = Math.max(
@@ -43,8 +44,14 @@ export function AuthShell({ children, metrics }: AuthShellProps) {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const showListener = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
-    const hideListener = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    const showListener = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardVisible(true);
+      if (Platform.OS === 'android') setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideListener = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+      if (Platform.OS === 'android') setKeyboardHeight(0);
+    });
 
     return () => {
       showListener.remove();
@@ -54,9 +61,9 @@ export function AuthShell({ children, metrics }: AuthShellProps) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.shell}>
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingBottom: keyboardHeight }]}>
         <LinearGradient
           colors={['#FFFFFF', '#F6F6FF', '#E9EAFF']}
           end={{ x: 0.5, y: 1 }}
@@ -70,7 +77,7 @@ export function AuthShell({ children, metrics }: AuthShellProps) {
               <ZaidWordmark accessibilityLabel="ZAID" height={17} style={styles.wordmark} width={57} />
               <View style={styles.quoteWrap}>
                 <Text style={[styles.quoteText, { fontSize: metrics.quoteFontSize }]}>
-                  The time has{'\n'}passed so quickly.
+                  Waktu berlalu{'\n'}begitu cepat.
                 </Text>
                 <Text style={styles.quoteAuthor}>-Socrates</Text>
               </View>
@@ -174,9 +181,9 @@ export function AuthLoadingContent() {
   return (
     <View style={styles.loadingContent}>
       <GoogleMark />
-      <ActivityIndicator accessibilityLabel="Loading" color="#7479FF" size="large" style={styles.loadingSpinner} />
-      <Text style={styles.loadingTitle}>Setting up your account</Text>
-      <Text style={styles.loadingCopy}>Please wait while we take you to ZAID.</Text>
+      <ActivityIndicator accessibilityLabel="Memuat" color="#7479FF" size="large" style={styles.loadingSpinner} />
+      <Text style={styles.loadingTitle}>Menyiapkan akunmu</Text>
+      <Text style={styles.loadingCopy}>Mohon tunggu, kami mengarahkanmu ke ZAID.</Text>
     </View>
   );
 }

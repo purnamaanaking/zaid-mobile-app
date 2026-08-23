@@ -1,6 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { RecurringOption } from '@/src/features/ai/types';
 import { PromptSchedule } from '@/src/types/schedule.types';
@@ -8,10 +7,10 @@ import { ReminderFields } from '@/src/features/reminders/components/ReminderFiel
 import { validateScheduleFields } from '@/src/utils/scheduleValidation';
 
 const RECURRING_OPTIONS: { label: string; value: RecurringOption }[] = [
-  { label: 'No Repeat', value: 'none' },
-  { label: 'Daily', value: 'daily' },
-  { label: 'Weekly', value: 'weekly' },
-  { label: 'Monthly', value: 'monthly' },
+  { label: 'Tanpa Ulang', value: 'none' },
+  { label: 'Harian', value: 'daily' },
+  { label: 'Mingguan', value: 'weekly' },
+  { label: 'Bulanan', value: 'monthly' },
 ];
 
 type SchedulePreviewModalProps = {
@@ -29,23 +28,6 @@ export function SchedulePreviewModal({
   schedule,
   visible,
 }: SchedulePreviewModalProps) {
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    if (!visible) return;
-
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showListener = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
-    const hideListener = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
-
-    return () => {
-      showListener.remove();
-      hideListener.remove();
-    };
-  }, [visible]);
-
   function handleSavePress() {
     if (!schedule) return;
     const problems = validateScheduleFields(schedule);
@@ -61,54 +43,64 @@ export function SchedulePreviewModal({
   }
 
   return (
-    <Modal animationType="slide" transparent visible={visible}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <Pressable 
-          accessibilityLabel="Close schedule preview" 
-          onPress={onClose} 
-          style={[styles.backdrop, isKeyboardVisible && { justifyContent: 'flex-end' }]}
-        >
-          <Pressable style={[styles.card, isKeyboardVisible && { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}>
+    <Modal
+      animationType="fade"
+      hardwareAccelerated
+      navigationBarTranslucent
+      onRequestClose={onClose}
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+      transparent
+      visible={visible}>
+      <View style={styles.modalRoot}>
+        <Pressable
+          accessibilityLabel="Tutup pratinjau jadwal"
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          pointerEvents="box-none"
+          style={styles.keyboardView}>
+          <View style={styles.card}>
             {/* Header with Sparkle Icon and Close */}
             <View style={styles.header}>
               <View style={styles.headerTitleContainer}>
                 <View style={styles.sparkleBadge}>
                   <MaterialIcons name="auto-awesome" color="#FFFFFF" size={14} />
-                  <Text style={styles.sparkleText}>AI Extract</Text>
+                  <Text style={styles.sparkleText}>Ekstraksi AI</Text>
                 </View>
-                <Text style={styles.title}>Schedule Detected</Text>
+                <Text style={styles.title}>Jadwal Terdeteksi</Text>
               </View>
-              <Pressable accessibilityLabel="Close modal" onPress={onClose} style={styles.closeButton}>
+              <Pressable accessibilityLabel="Tutup modal" onPress={onClose} style={styles.closeButton}>
                 <MaterialIcons name="close" color="#9CA3AF" size={22} />
               </Pressable>
             </View>
 
             <Text style={styles.subtitle}>
-              Review and adjust the extracted calendar fields below.
+              Tinjau dan sesuaikan kolom kalender hasil ekstraksi di bawah.
             </Text>
 
             <ScrollView 
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContainer}
               keyboardShouldPersistTaps="handled"
-            >
+              nestedScrollEnabled
+              style={styles.scrollArea}>
               {/* Title Field */}
               <Field
                 icon="title"
-                label="Activity Title"
+                label="Judul Aktivitas"
                 onChangeText={(title) => onChangeSchedule({ title })}
                 value={schedule.title}
-                placeholder="e.g. Meeting Client"
+                placeholder="cth. Meeting Client"
               />
 
               {/* Date Range Row */}
               <View style={styles.fieldRow}>
                 <Field
                   icon="event"
-                  label="Start Date"
+                  label="Tanggal Mulai"
                   onChangeText={(date) => onChangeSchedule({ date })}
                   value={schedule.date}
                   placeholder="YYYY-MM-DD"
@@ -116,7 +108,7 @@ export function SchedulePreviewModal({
                 />
                 <Field
                   icon="event"
-                  label="End Date (Opt)"
+                  label="Tanggal Selesai (Opsional)"
                   onChangeText={(endDate) => onChangeSchedule({ endDate: endDate || undefined })}
                   value={schedule.endDate ?? ''}
                   placeholder="YYYY-MM-DD"
@@ -128,7 +120,7 @@ export function SchedulePreviewModal({
               <View style={styles.fieldRow}>
                 <Field
                   icon="schedule"
-                  label="Start Time"
+                  label="Jam Mulai"
                   onChangeText={(time) => onChangeSchedule({ time })}
                   value={schedule.time}
                   placeholder="HH:mm"
@@ -136,7 +128,7 @@ export function SchedulePreviewModal({
                 />
                 <Field
                   icon="schedule"
-                  label="End Time"
+                  label="Jam Selesai"
                   onChangeText={(endTime) => onChangeSchedule({ endTime })}
                   value={schedule.endTime}
                   placeholder="HH:mm"
@@ -147,12 +139,12 @@ export function SchedulePreviewModal({
               {/* Description Field */}
               <Field
                 icon="notes"
-                label="Description"
+                label="Deskripsi"
                 multiline
                 numberOfLines={3}
                 onChangeText={(description) => onChangeSchedule({ description })}
                 value={schedule.description ?? ''}
-                placeholder="Write description notes..."
+                placeholder="Tulis catatan deskripsi..."
                 inputStyle={styles.multilineInput}
               />
 
@@ -169,7 +161,7 @@ export function SchedulePreviewModal({
               <View style={styles.recurringSection}>
                 <View style={styles.sectionHeader}>
                   <MaterialIcons name="repeat" color="#665CFF" size={16} />
-                  <Text style={styles.sectionLabel}>Repeat Interval</Text>
+                  <Text style={styles.sectionLabel}>Interval Pengulangan</Text>
                 </View>
                 <View style={styles.recurringRow}>
                   {RECURRING_OPTIONS.map((option) => {
@@ -177,7 +169,7 @@ export function SchedulePreviewModal({
 
                     return (
                       <Pressable
-                        accessibilityLabel={`Set recurring ${option.label}`}
+                        accessibilityLabel={`Atur pengulangan ${option.label}`}
                         accessibilityRole="button"
                         key={option.value}
                         onPress={() => onChangeSchedule({ recurring: option.value })}
@@ -195,16 +187,16 @@ export function SchedulePreviewModal({
             {/* Bottom Actions */}
             <View style={styles.actions}>
               <Pressable accessibilityRole="button" onPress={onClose} style={styles.secondaryButton}>
-                <Text style={styles.secondaryText}>Edit Later</Text>
+                <Text style={styles.secondaryText}>Edit Nanti</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={handleSavePress} style={styles.primaryButton}>
                 <MaterialIcons name="check-circle" color="#FFFFFF" size={16} style={{ marginRight: 6 }} />
-                <Text style={styles.primaryText}>Save Schedule</Text>
+                <Text style={styles.primaryText}>Simpan Jadwal</Text>
               </Pressable>
             </View>
-          </Pressable>
-        </Pressable>
-      </KeyboardAvoidingView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -250,11 +242,11 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  keyboardView: {
+  modalRoot: {
+    backgroundColor: 'rgba(17, 24, 39, 0.45)',
     flex: 1,
   },
-  backdrop: {
-    backgroundColor: 'rgba(17, 24, 39, 0.45)',
+  keyboardView: {
     flex: 1,
     justifyContent: 'center',
     padding: 22,
@@ -264,6 +256,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 22,
     maxHeight: '85%',
+    width: '100%',
     shadowColor: '#000000',
     shadowOffset: { height: 12, width: 0 },
     shadowOpacity: 0.15,
@@ -314,6 +307,9 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     paddingBottom: 16,
+  },
+  scrollArea: {
+    flexShrink: 1,
   },
   fieldContainer: {
     marginTop: 12,

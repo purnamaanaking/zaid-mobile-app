@@ -59,7 +59,7 @@ export function CalendarTaskSheet({
   const [reminderChannel, setReminderChannel] = useState<ReminderChannel>('whatsapp');
 
   const title = useMemo(() => {
-    if (!startDate) return 'Selected tasks';
+    if (!startDate) return 'Tugas terpilih';
     if (endDate && endDate !== startDate) {
       return `${formatFullDate(startDate)} - ${formatFullDate(endDate)}`;
     }
@@ -175,7 +175,7 @@ export function CalendarTaskSheet({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.kbv}>
       <View style={styles.backdrop}>
-        <Pressable accessibilityLabel="Close selected tasks" style={styles.backdropPressable} onPress={onClose} />
+        <Pressable accessibilityLabel="Tutup tugas terpilih" style={styles.backdropPressable} onPress={onClose} />
         <Animated.View
             style={[
               styles.sheet,
@@ -194,7 +194,7 @@ export function CalendarTaskSheet({
 
           <View style={styles.header}>
             <View style={styles.titleBlock}>
-              <Text style={styles.eyebrow}>Selected date</Text>
+              <Text style={styles.eyebrow}>Tanggal terpilih</Text>
               <Text numberOfLines={1} style={styles.title}>
                 {title}
               </Text>
@@ -203,14 +203,14 @@ export function CalendarTaskSheet({
               <Text style={styles.countText}>{schedules.length}</Text>
             </View>
             <Pressable
-              accessibilityLabel="Add manual task"
+              accessibilityLabel="Tambah tugas manual"
               accessibilityRole="button"
               onPress={() => setAdding((current) => !current)}
               style={styles.addButton}>
               <MaterialIcons name={isAdding ? 'remove' : 'add'} color="#FFFFFF" size={22} />
             </Pressable>
             <Pressable
-              accessibilityLabel="Close task sheet"
+              accessibilityLabel="Tutup panel tugas"
               accessibilityRole="button"
               onPress={onClose}
               style={styles.closeButton}>
@@ -225,15 +225,15 @@ export function CalendarTaskSheet({
             {isAdding ? (
               <View style={styles.manualCard}>
                 <View style={styles.manualHeader}>
-                  <Text style={styles.manualTitle}>Add task manually</Text>
-                  <Text style={styles.manualSubtitle}>Saved to the selected calendar range.</Text>
+                  <Text style={styles.manualTitle}>Tambah tugas manual</Text>
+                  <Text style={styles.manualSubtitle}>Tersimpan ke rentang kalender terpilih.</Text>
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Title</Text>
+                  <Text style={styles.inputLabel}>Judul</Text>
                   <TextInput
                     onChangeText={setDraftTitle}
-                    placeholder="Task title"
+                    placeholder="Judul tugas"
                     placeholderTextColor="#9CA3AF"
                     style={styles.textInput}
                     value={draftTitle}
@@ -242,7 +242,7 @@ export function CalendarTaskSheet({
 
                 <View style={styles.timeRow}>
                   <View style={[styles.inputGroup, styles.timeInput]}>
-                    <Text style={styles.inputLabel}>Start</Text>
+                    <Text style={styles.inputLabel}>Mulai</Text>
                     <TextInput
                       onChangeText={setDraftTime}
                       placeholder="09:00"
@@ -252,7 +252,7 @@ export function CalendarTaskSheet({
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.timeInput]}>
-                    <Text style={styles.inputLabel}>End</Text>
+                    <Text style={styles.inputLabel}>Selesai</Text>
                     <TextInput
                       onChangeText={setDraftEndTime}
                       placeholder="10:00"
@@ -264,11 +264,11 @@ export function CalendarTaskSheet({
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Description</Text>
+                  <Text style={styles.inputLabel}>Deskripsi</Text>
                   <TextInput
                     multiline
                     onChangeText={setDraftDescription}
-                    placeholder="Optional details"
+                    placeholder="Detail opsional"
                     placeholderTextColor="#9CA3AF"
                     style={[styles.textInput, styles.textArea]}
                     value={draftDescription}
@@ -286,20 +286,20 @@ export function CalendarTaskSheet({
 
                 <View style={styles.formActions}>
                   <Pressable
-                    accessibilityLabel="Cancel manual task"
+                    accessibilityLabel="Batalkan tugas manual"
                     accessibilityRole="button"
                     onPress={() => setAdding(false)}
                     style={[styles.formButton, styles.cancelButton]}>
-                    <Text style={styles.cancelText}>Cancel</Text>
+                    <Text style={styles.cancelText}>Batal</Text>
                   </Pressable>
                   <Pressable
-                    accessibilityLabel="Save manual task"
+                    accessibilityLabel="Simpan tugas manual"
                     accessibilityRole="button"
                     disabled={!draftTitle.trim()}
                     onPress={handleSaveManualSchedule}
                     style={[styles.formButton, styles.saveButton, !draftTitle.trim() ? styles.saveButtonDisabled : null]}>
                     <MaterialIcons name="check" color="#FFFFFF" size={16} />
-                    <Text style={styles.saveText}>Save Task</Text>
+                    <Text style={styles.saveText}>Simpan Tugas</Text>
                   </Pressable>
                 </View>
               </View>
@@ -318,8 +318,8 @@ export function CalendarTaskSheet({
             ) : (
               <View style={styles.emptyCard}>
                 <MaterialIcons name="event-busy" color="#665CFF" size={28} />
-                <Text style={styles.emptyTitle}>No task for this date</Text>
-                <Text style={styles.emptyText}>Tasks created from AI prompts will appear here.</Text>
+                <Text style={styles.emptyTitle}>Tidak ada tugas di tanggal ini</Text>
+                <Text style={styles.emptyText}>Tugas dari perintah AI akan muncul di sini.</Text>
               </View>
             )}
           </ScrollView>

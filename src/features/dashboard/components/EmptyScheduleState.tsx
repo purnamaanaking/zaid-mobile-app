@@ -5,8 +5,8 @@ import { Colors } from '@/src/constants/colors';
 export function EmptyScheduleState() {
   return (
     <View style={styles.emptyCard}>
-      <Text style={styles.emptyTitle}>No schedule found</Text>
-      <Text style={styles.emptyText}>Tasks created through prompt extraction will appear here.</Text>
+      <Text style={styles.emptyTitle}>Tidak ada jadwal ditemukan</Text>
+      <Text style={styles.emptyText}>Tugas yang dibuat melalui ekstraksi prompt akan muncul di sini.</Text>
     </View>
   );
 }

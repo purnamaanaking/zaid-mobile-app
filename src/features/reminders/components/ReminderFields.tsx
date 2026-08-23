@@ -38,7 +38,7 @@ export function ReminderFields({
     <View style={styles.section}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Reminder</Text>
+          <Text style={styles.title}>Pengingat</Text>
           <Text style={styles.helper}>Item wajib punya tanggal dan jam.</Text>
         </View>
         <Pressable
@@ -62,11 +62,11 @@ export function ReminderFields({
                 onPress={() => onChangeMinutes(preset.value)}
               />
             ))}
-            <Option active={custom} label="Custom" onPress={() => custom || onChangeMinutes(10)} />
+            <Option active={custom} label="Kustom" onPress={() => custom || onChangeMinutes(10)} />
           </View>
           {custom ? (
             <TextInput
-              accessibilityLabel="Custom reminder minutes"
+              accessibilityLabel="Menit pengingat kustom"
               keyboardType="number-pad"
               onChangeText={(value) => onChangeMinutes(Math.max(1, Number(value) || 1))}
               placeholder="Menit sebelumnya"

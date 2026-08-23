@@ -12,9 +12,9 @@ export function DashboardSearch({ onChangeSearch, search }: DashboardSearchProps
   return (
     <View style={styles.searchBox}>
       <TextInput
-        accessibilityLabel="Search schedule"
+        accessibilityLabel="Cari jadwal"
         onChangeText={onChangeSearch}
-        placeholder="Search schedule"
+        placeholder="Cari jadwal"
         placeholderTextColor="#A4ADBF"
         style={styles.searchInput}
         value={search}

@@ -12,7 +12,7 @@ export function ProfileHeaderCard() {
         <MaterialIcons name="person" color="#FFFFFF" size={42} />
       </View>
       <View>
-        <Text style={styles.name}>{user?.full_name || 'User'}</Text>
+        <Text style={styles.name}>{user?.full_name || 'Pengguna'}</Text>
         <Text style={styles.handle}>{user?.email || 'user@example.com'}</Text>
       </View>
     </View>

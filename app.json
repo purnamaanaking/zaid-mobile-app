@@ -4,10 +4,10 @@
     "slug": "zaid-mobile-app",
     "version": "1.2.1",
     "orientation": "portrait",
-    "owner": "zhacksdev",
+    "owner": "devformobile",
     "icon": "./assets/brand/zaid-icon.png",
     "scheme": "zaidmobileapp",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -60,7 +60,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5206dfec-5b01-42fe-9df4-13ae25fd3069"
+        "projectId": "169dc2eb-dc7c-493d-8333-226a3c50f72a"
       }
     },
     "runtimeVersion": {

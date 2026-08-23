@@ -5,7 +5,8 @@ import { ReminderResource } from '@/src/services/api/reminder.api';
 
 export function ReminderCard({ reminder, onDelete }: { reminder: ReminderResource; onDelete: () => void }) {
   const source = reminder.task || reminder.calendar_event;
-  const channel = reminder.channel === 'both' ? 'WhatsApp + App' : reminder.channel === 'app' ? 'App' : 'WhatsApp';
+  const channel = reminder.channel === 'both' ? 'WhatsApp + Aplikasi' : reminder.channel === 'app' ? 'Aplikasi' : 'WhatsApp';
+  const statusLabel = reminder.status === 'sent' ? 'Terkirim' : reminder.status === 'failed' ? 'Gagal' : 'Menunggu';
   const offset = reminder.minutes_before >= 1440
     ? `${reminder.minutes_before / 1440} hari`
     : reminder.minutes_before >= 60
@@ -16,13 +17,13 @@ export function ReminderCard({ reminder, onDelete }: { reminder: ReminderResourc
     <View style={styles.card}>
       <View style={styles.icon}><MaterialIcons name="notifications-active" color="#665CFF" size={20} /></View>
       <View style={styles.content}>
-        <Text numberOfLines={1} style={styles.title}>{source?.title || 'Reminder'}</Text>
+        <Text numberOfLines={1} style={styles.title}>{source?.title || 'Pengingat'}</Text>
         <Text style={styles.meta}>{offset} sebelumnya · {channel}</Text>
-        <Text style={[styles.status, reminder.status === 'sent' ? styles.sent : null, reminder.status === 'failed' ? styles.failed : null]}>{reminder.status}</Text>
+        <Text style={[styles.status, reminder.status === 'sent' ? styles.sent : null, reminder.status === 'failed' ? styles.failed : null]}>{statusLabel}</Text>
         {reminder.error_message ? <Text style={styles.error}>{reminder.error_message}</Text> : null}
       </View>
       {reminder.status === 'pending' ? (
-        <Pressable accessibilityLabel="Hapus reminder" onPress={onDelete} style={styles.delete}>
+        <Pressable accessibilityLabel="Hapus pengingat" onPress={onDelete} style={styles.delete}>
           <MaterialIcons name="delete-outline" color="#EF4444" size={20} />
         </Pressable>
       ) : null}

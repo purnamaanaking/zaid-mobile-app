@@ -67,7 +67,7 @@ export function ProfilePage() {
             <View style={styles.confirmRow}>
               <Text style={styles.menuText}>Form konfirmasi agenda</Text>
               <Text style={styles.confirmHint}>
-                {settings.agendaConfirmationEnabled ? 'Aktif — hasil prompt buka form review' : 'Nonaktif — agenda langsung disimpan'}
+                {settings.agendaConfirmationEnabled ? 'Aktif — hasil AI perlu dikonfirmasi sebelum disimpan' : 'Nonaktif — hasil AI langsung disimpan'}
               </Text>
             </View>
             <Pressable

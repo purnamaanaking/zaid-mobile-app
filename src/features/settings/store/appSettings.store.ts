@@ -16,7 +16,7 @@ const SETTINGS_KEY = 'zaid_app_settings';
 
 const defaultSettings: AppSettings = {
   agendaConfirmationEnabled: true,
-  theme: 'system',
+  theme: 'light',
   weeklyReminderDay: 'monday',
   weeklyReminderEnabled: true,
   weeklyReminderTime: '08:00',

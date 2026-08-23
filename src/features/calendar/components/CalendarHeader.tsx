@@ -19,21 +19,21 @@ export function CalendarHeader({ monthDate, onNextMonth, onPreviousMonth, onToda
       </View>
       <View style={styles.actions}>
         <Pressable
-          accessibilityLabel="Previous month"
+          accessibilityLabel="Bulan sebelumnya"
           accessibilityRole="button"
           onPress={onPreviousMonth}
           style={styles.iconButton}>
           <MaterialIcons name="chevron-left" color="#445066" size={34} />
         </Pressable>
         <Pressable
-          accessibilityLabel="Jump to today"
+          accessibilityLabel="Ke hari ini"
           accessibilityRole="button"
           onPress={onTodayPress}
           style={styles.todayButton}>
-          <Text style={styles.todayText}>Today</Text>
+          <Text style={styles.todayText}>Hari Ini</Text>
         </Pressable>
         <Pressable
-          accessibilityLabel="Next month"
+          accessibilityLabel="Bulan berikutnya"
           accessibilityRole="button"
           onPress={onNextMonth}
           style={styles.iconButton}>

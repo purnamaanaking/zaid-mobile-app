@@ -8,9 +8,9 @@ type CalendarFilterBarProps = {
 };
 
 const FILTERS: { label: string; value: CalendarFilter }[] = [
-  { label: 'Recent', value: 'recent' },
-  { label: 'Today', value: 'today' },
-  { label: 'Upcoming', value: 'upcoming' },
+  { label: 'Terbaru', value: 'recent' },
+  { label: 'Hari Ini', value: 'today' },
+  { label: 'Mendatang', value: 'upcoming' },
 ];
 
 export function CalendarFilterBar({ activeFilter, onChangeFilter }: CalendarFilterBarProps) {

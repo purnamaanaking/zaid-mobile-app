@@ -31,7 +31,7 @@ export function DashboardDateStrip({
 
           return (
             <Pressable
-              accessibilityLabel={`Select ${formatReadableDate(key)}`}
+              accessibilityLabel={`Pilih ${formatReadableDate(key)}`}
               accessibilityRole="button"
               key={key}
               onPress={() => onSelectDate(key)}
