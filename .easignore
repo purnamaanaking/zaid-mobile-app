@@ -1,0 +1,7 @@
+.git
+node_modules
+.expo
+.expo-test-export
+*.apk
+*.log
+*.md
