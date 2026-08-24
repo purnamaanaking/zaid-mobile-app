@@ -1,9 +1,11 @@
 import { apiClient } from './client';
 
 export type PromptAttachment = {
-  type: 'image' | 'audio_transcription';
+  type: 'image' | 'audio_transcription' | 'document_text';
   url: string | null;
   text?: string | null;
+  mime_type?: string | null;
+  name?: string | null;
 };
 
 export type ProcessPromptRequest = {
@@ -65,6 +67,7 @@ export type UploadResponse = {
     mime_type: string;
     size: string;
     original_name: string;
+    extracted_text?: string | null;
   };
 };
 

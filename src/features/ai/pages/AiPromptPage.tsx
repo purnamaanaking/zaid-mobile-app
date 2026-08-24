@@ -452,17 +452,21 @@ export function AiPromptPage() {
       const mime = asset.mimeType || '';
       let type: 'document' | 'image' = 'document';
       if (mime.startsWith('image/')) type = 'image';
-      if (type !== 'image') {
-        Alert.alert('Format belum didukung', 'Backend AI saat ini menerima lampiran gambar. Gunakan JPG, PNG, atau WEBP.');
+      const documentExtensions = ['pdf', 'csv', 'xls', 'xlsx'];
+      const extension = asset.name.split('.').pop()?.toLowerCase();
+      if (type === 'document' && !documentExtensions.includes(extension ?? '')) {
+        Alert.alert('Format belum didukung', 'Gunakan PDF, CSV, XLS, XLSX, JPG, PNG, atau WEBP.');
         return;
       }
 
       if (Config.useLocalUiData) {
         setAttachedFile({ name: asset.name, type: asset.mimeType || 'document', uri: asset.uri });
         setAttachments([{
-          type: 'image',
-          url: asset.uri,
+          type: type === 'image' ? 'image' : 'document_text',
+          url: type === 'image' ? asset.uri : null,
           text: `Local file: ${asset.name}`,
+          name: asset.name,
+          mime_type: asset.mimeType || null,
         }]);
         return;
       }
@@ -480,9 +484,11 @@ export function AiPromptPage() {
         if (uploadRes.success && uploadRes.data) {
           setAttachedFile({ name: asset.name, type: asset.mimeType || 'document', uri: uploadRes.data.url });
           setAttachments([{
-            type: 'image',
-            url: uploadRes.data.url,
-            text: `File: ${asset.name}`,
+            type: type === 'image' ? 'image' : 'document_text',
+            url: type === 'image' ? uploadRes.data.url : null,
+            text: type === 'image' ? `File: ${asset.name}` : uploadRes.data.extracted_text || '',
+            name: uploadRes.data.original_name,
+            mime_type: uploadRes.data.mime_type,
           }]);
         } else {
           Alert.alert('Error', 'Gagal mengunggah file ke server.');
