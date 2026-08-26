@@ -5,3 +5,7 @@ node_modules
 *.apk
 *.log
 *.md
+android/.gradle
+android/build
+android/app/build
+android/app/.cxx
