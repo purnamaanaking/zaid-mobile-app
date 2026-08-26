@@ -19,7 +19,6 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AiPromptComposer } from '@/src/features/ai/components/AiPromptComposer';
-import { SchedulePreviewModal } from '@/src/features/ai/components/SchedulePreviewModal';
 import { Config } from '@/src/constants/config';
 import { Fonts } from '@/src/constants/typography';
 import { addPromptSchedule, fetchPromptSchedules } from '@/src/features/schedule/store/promptScheduleStore';
@@ -27,7 +26,6 @@ import { extractApi, PromptAttachment } from '@/src/services/api/extract.api';
 import { useAuthStore } from '@/src/store/auth.store';
 import { PromptSchedule } from '@/src/types/schedule.types';
 import { useAppTheme } from '@/src/theme/useAppTheme';
-import { useAppSettings } from '@/src/features/settings/store/appSettings.store';
 import { fetchReminders, useReminders } from '@/src/features/reminders/store/reminderStore';
 import { addDays, addOneHour, dateKey, normalizeApiTime } from '@/src/utils/date';
 import ZaidBlackLogo from '@/assets/brand/zaid-black.svg';
@@ -217,7 +215,6 @@ export function AiPromptPage() {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const theme = useAppTheme();
-  const { settings } = useAppSettings();
   const { reminders } = useReminders();
   const scrollRef = useRef<ScrollView | null>(null);
   const drawerX = useRef(new Animated.Value(-300)).current;
@@ -227,8 +224,6 @@ export function AiPromptPage() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [preview, setPreview] = useState<PromptSchedule | null>(null);
   const [attachedFile, setAttachedFile] = useState<{ name: string; type: string; uri?: string } | null>(null);
   const [attachments, setAttachments] = useState<PromptAttachment[] | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -242,8 +237,6 @@ export function AiPromptPage() {
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
-  const successScale = useRef(new Animated.Value(0)).current;
-  const successOpacity = useRef(new Animated.Value(0)).current;
 
   const statusText = useMemo(() => {
     if (isProcessing) return 'ZAID sedang membaca pesan kamu...';
@@ -330,23 +323,6 @@ export function AiPromptPage() {
     if (drawerOpen) closeDrawer(); else openDrawer();
   }
 
-  function triggerSuccess(callback: () => void) {
-    setShowSuccess(true);
-    successScale.setValue(0);
-    successOpacity.setValue(0);
-    Animated.sequence([
-      Animated.parallel([
-        Animated.spring(successScale, { toValue: 1, useNativeDriver: true, damping: 10, stiffness: 200 }),
-        Animated.timing(successOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-      ]),
-      Animated.delay(650),
-      Animated.timing(successOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
-    ]).start(() => {
-      setShowSuccess(false);
-      callback();
-    });
-  }
-
   function appendMessage(message: ChatMessage) {
     setMessages((current) => [...current, message]);
   }
@@ -363,12 +339,18 @@ export function AiPromptPage() {
     const res = await extractApi.processPrompt(text, currentAttachments);
     if (!res.success || !res.data) throw new Error(res.data?.human_response || 'ZAID gagal memproses pesan.');
 
-    const entities = res.data.confirmation?.entities;
-    if (res.data.requires_confirmation && entities && ['CREATE', 'CREATE_EVENTS'].includes(entities.action ?? '')) {
+    if (res.data.requires_confirmation) {
+      if (res.data.parse_status === 'ambiguous') {
+        return {
+          backendSaved: true,
+          response: res.data.human_response,
+        } satisfies ParsedSchedule;
+      }
+
+      const confirmed = await extractApi.confirmPrompt(res.data.prompt_request_id, true);
       return {
-        schedule: taskToSchedule(entities, text),
-        backendSaved: false,
-        promptRequestId: res.data.prompt_request_id,
+        backendSaved: true,
+        response: confirmed.data.human_response || 'Jadwal sudah disimpan.',
       } satisfies ParsedSchedule;
     }
 
@@ -413,20 +395,11 @@ export function AiPromptPage() {
       }
 
       const schedule = parsed.schedule;
-      const promptRequestId = parsed.promptRequestId;
       replaceMessage(thinkingId, { status: 'success', text: buildScheduleSummary(schedule) });
       Keyboard.dismiss();
-
-      if (settings.agendaConfirmationEnabled) {
-        triggerSuccess(() => setPreview(schedule));
-      } else if (promptRequestId) {
-        await extractApi.confirmPrompt(promptRequestId, true);
-        await fetchPromptSchedules();
-        appendMessage({ id: `saved-${Date.now()}`, role: 'assistant', status: 'success', text: `Disimpan: "${schedule.title}" ke Kalender.` });
-      } else {
-        await addPromptSchedule(schedule);
-        appendMessage({ id: `saved-${Date.now()}`, role: 'assistant', status: 'success', text: `Disimpan: "${schedule.title}" ke Kalender.` });
-      }
+      await addPromptSchedule(schedule);
+      await fetchPromptSchedules();
+      appendMessage({ id: `saved-${Date.now()}`, role: 'assistant', status: 'success', text: `Disimpan: "${schedule.title}" ke Kalender.` });
     } catch (err: any) {
       const apiErrMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
       console.warn('Backend prompt processing failed:', apiErrMsg);
@@ -503,25 +476,6 @@ export function AiPromptPage() {
     } finally {
       setIsProcessing(false);
     }
-  }
-
-  async function handleSave() {
-    if (!preview) return;
-
-    try {
-      await addPromptSchedule(preview);
-    } catch (err: any) {
-      Alert.alert('Gagal menyimpan', err.response?.data?.message || err.message || 'Coba lagi.');
-      return;
-    }
-
-    appendMessage({
-      id: `saved-${Date.now()}`,
-      role: 'assistant',
-      status: 'success',
-      text: `Disimpan: "${preview.title}" ke Kalender.`,
-    });
-    setPreview(null);
   }
 
   return (
@@ -671,18 +625,6 @@ export function AiPromptPage() {
             />
           ))}
 
-          {showSuccess ? (
-            <Animated.View
-              style={[
-                styles.successOverlay,
-                { opacity: successOpacity, transform: [{ scale: successScale }] },
-              ]}>
-              <View style={styles.successCircle}>
-                <MaterialIcons name="check" color="#FFFFFF" size={32} />
-              </View>
-              <Text style={styles.successLabel}>Jadwal terdeteksi</Text>
-            </Animated.View>
-          ) : null}
         </ScrollView>
 
         <View style={styles.statusRow}>
@@ -706,17 +648,6 @@ export function AiPromptPage() {
           />
         </View>
 
-        <SchedulePreviewModal
-          onChangeSchedule={(patch) =>
-            setPreview((current) => (current ? { ...current, ...patch } : current))
-          }
-          onClose={() => {
-            setPreview(null);
-          }}
-          onSave={handleSave}
-          schedule={preview}
-          visible={Boolean(preview)}
-        />
       </KeyboardAvoidingView>
     </View>
   );

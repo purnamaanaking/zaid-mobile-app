@@ -34,7 +34,7 @@ export type ProcessPromptResponse = {
   message: string;
   data: {
     prompt_request_id: string;
-    parse_status: 'success' | 'parsed' | 'unsupported' | 'failed' | 'requires_confirmation';
+    parse_status: 'success' | 'parsed' | 'ambiguous' | 'unsupported' | 'failed' | 'requires_confirmation';
     intent: string | null;
     confidence_score?: number;
     requires_confirmation: boolean;
