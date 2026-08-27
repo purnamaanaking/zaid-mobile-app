@@ -257,6 +257,35 @@ export function AiPromptPage() {
     fetchReminders().catch((err) => {
       console.warn('Failed to fetch reminders for notifications', err);
     });
+
+    // Load riwayat prompt/chat dari backend
+    extractApi.listPrompts().then((res) => {
+      if (res.success && res.data?.items?.length) {
+        const historyMessages: ChatMessage[] = [];
+        res.data.items.forEach((item) => {
+          if (item.text) {
+            historyMessages.push({
+              id: `user-${item.id}`,
+              role: 'user',
+              text: item.text,
+            });
+          }
+          if (item.response) {
+            historyMessages.push({
+              id: `assistant-${item.id}`,
+              role: 'assistant',
+              status: 'success',
+              text: item.response,
+            });
+          }
+        });
+        if (historyMessages.length) {
+          setMessages(historyMessages);
+        }
+      }
+    }).catch((err) => {
+      console.warn('Failed to fetch prompt history', err);
+    });
   }, []);
 
   useEffect(() => {

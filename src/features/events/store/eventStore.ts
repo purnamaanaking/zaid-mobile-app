@@ -118,14 +118,21 @@ export async function updateEvent(eventId: string, payload: Partial<Omit<EventRe
 }
 
 export async function deleteEvent(eventId: string) {
+  const previous = events;
+  events = events.filter((item) => item.id !== eventId);
+  emit();
+
   if (Config.useLocalUiData) {
     seedLocalEvents();
     localEvents = localEvents.filter((item) => item.id !== eventId);
-    events = events.filter((item) => item.id !== eventId);
-    emit();
     return;
   }
 
-  await eventApi.remove(eventId);
-  events = events.filter((item) => item.id !== eventId); emit();
+  try {
+    await eventApi.remove(eventId);
+  } catch (err) {
+    events = previous;
+    emit();
+    throw err;
+  }
 }

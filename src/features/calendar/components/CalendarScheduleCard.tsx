@@ -40,6 +40,7 @@ export function CalendarScheduleCard({
   const [reminderEnabled, setReminderEnabled] = useState(schedule.reminderEnabled ?? false);
   const [reminderMinutes, setReminderMinutes] = useState(schedule.reminderMinutes ?? 30);
   const [reminderChannel, setReminderChannel] = useState<ReminderChannel>(schedule.reminderChannel ?? 'whatsapp');
+  const [draftRecurring, setDraftRecurring] = useState<'none' | 'daily' | 'weekly' | 'monthly'>(schedule.recurring ?? 'none');
   const [formHeight, setFormHeight] = useState(0);
 
   // sync draft ketika isEditing berubah dari luar
@@ -54,6 +55,7 @@ export function CalendarScheduleCard({
       setReminderEnabled(schedule.reminderEnabled ?? false);
       setReminderMinutes(schedule.reminderMinutes ?? 30);
       setReminderChannel(schedule.reminderChannel ?? 'whatsapp');
+      setDraftRecurring(schedule.recurring ?? 'none');
     }
   }, [isEditing, schedule]);
 
@@ -113,6 +115,7 @@ export function CalendarScheduleCard({
         reminderEnabled,
         reminderMinutes,
         reminderChannel,
+        recurring: draftRecurring,
       });
     } catch (err: any) {
       Alert.alert('Gagal menyimpan', err?.message || 'Terjadi kesalahan.');
@@ -232,7 +235,9 @@ export function CalendarScheduleCard({
           </View>
           <View style={styles.metaChip}>
             <MaterialIcons name="sync" color="#FFFFFF" size={13} />
-            <Text style={styles.metaText}>Tanpa Pengulangan</Text>
+            <Text style={styles.metaText}>
+              {schedule.recurring === 'daily' ? 'Harian' : schedule.recurring === 'weekly' ? 'Mingguan' : schedule.recurring === 'monthly' ? 'Bulanan' : 'Tanpa Pengulangan'}
+            </Text>
           </View>
         </View>
 
@@ -310,6 +315,30 @@ export function CalendarScheduleCard({
                 placeholder="10:00"
                 placeholderTextColor="#9CA3AF"
               />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Pengulangan</Text>
+            <View style={styles.recurringRow}>
+              {[
+                { label: 'Tanpa', value: 'none' as const },
+                { label: 'Harian', value: 'daily' as const },
+                { label: 'Mingguan', value: 'weekly' as const },
+                { label: 'Bulanan', value: 'monthly' as const },
+              ].map((opt) => {
+                const active = draftRecurring === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => setDraftRecurring(opt.value)}
+                    style={[styles.recurringPill, active ? styles.recurringPillActive : null]}>
+                    <Text style={[styles.recurringPillText, active ? styles.recurringPillTextActive : null]}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
@@ -550,6 +579,28 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 60,
     textAlignVertical: 'top',
+  },
+  recurringRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  recurringPill: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  recurringPillActive: {
+    backgroundColor: '#665CFF',
+  },
+  recurringPillText: {
+    color: '#4B5563',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  recurringPillTextActive: {
+    color: '#FFFFFF',
   },
   rowInputs: {
     flexDirection: 'row',

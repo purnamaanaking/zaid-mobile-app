@@ -5,14 +5,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { ProfileHeaderCard } from '@/src/features/profile/components/ProfileHeaderCard';
 import { useAuthStore } from '@/src/store/auth.store';
-import { PreferencesTheme, useAppSettings } from '@/src/features/settings/store/appSettings.store';
+import { useAppSettings } from '@/src/features/settings/store/appSettings.store';
 import { useAppTheme } from '@/src/theme/useAppTheme';
-
-const THEME_OPTIONS: { icon: keyof typeof MaterialIcons.glyphMap; label: string; value: PreferencesTheme }[] = [
-  { icon: 'brightness-auto', label: 'Sistem', value: 'system' },
-  { icon: 'light-mode', label: 'Terang', value: 'light' },
-  { icon: 'dark-mode', label: 'Gelap', value: 'dark' },
-];
 
 const PROFILE_MENUS: { icon: keyof typeof MaterialIcons.glyphMap; route: Href; title: string }[] = [
   { icon: 'person-outline', route: '/(app)/settings-profile' as Href, title: 'Pengaturan Profil' },
@@ -78,25 +72,6 @@ export function ProfilePage() {
               <View style={[styles.knob, settings.agendaConfirmationEnabled ? styles.knobOn : null]} />
             </Pressable>
           </View>
-        </View>
-
-        <View style={styles.settingsSection}>
-          <Text style={[styles.menuItem, { borderBottomColor: '#F3F4F6', borderBottomWidth: 1 }, styles.sectionLabel]}>Tampilan</Text>
-          {THEME_OPTIONS.map((option) => {
-            const active = settings.theme === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                accessibilityLabel={option.label}
-                accessibilityRole="button"
-                onPress={() => updateAppSettings({ theme: option.value })}
-                style={[styles.menuItem, active ? styles.menuItemActive : null]}>
-                <MaterialIcons name={option.icon} size={22} color={active ? '#665CFF' : '#374151'} />
-                <Text style={[styles.menuText, active ? styles.menuTextActive : null]}>{option.label}</Text>
-                {active ? <MaterialIcons name="check" size={20} color="#665CFF" style={{ marginLeft: 'auto' }} /> : null}
-              </Pressable>
-            );
-          })}
         </View>
 
         <Pressable

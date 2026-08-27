@@ -4,6 +4,7 @@ import { Config } from '@/src/constants/config';
 import { buildPromptSchedules } from '@/src/features/schedule/data/promptSchedules';
 import { scheduleApi } from '@/src/services/api/schedule.api';
 import { deleteReminder, fetchReminders, remindersForEvent, saveReminder, updateReminder } from '@/src/features/reminders/store/reminderStore';
+import { deleteEvent } from '@/src/features/events/store/eventStore';
 import { addOneHour, normalizeApiTime } from '@/src/utils/date';
 
 let schedules: PromptSchedule[] = [];
@@ -184,6 +185,7 @@ export async function addPromptSchedule(schedule: PromptSchedule) {
 export async function deletePromptSchedule(scheduleId: string) {
   const previous = schedules;
   schedules = schedules.filter((schedule) => schedule.id !== scheduleId);
+  deleteEvent(scheduleId).catch(() => {});
   error = null;
   emit();
 
@@ -264,6 +266,9 @@ export async function updatePromptSchedule(scheduleId: string, patch: Partial<Pr
       scheduled_time: toApiTime(patch.time),
       scheduled_end_date: patch.endDate || patch.date,
       scheduled_end_time: toApiTime(patch.endTime),
+      recurrence: patch.recurring && patch.recurring !== 'none'
+        ? { type: patch.recurring, interval: 1 }
+        : null,
     };
     await scheduleApi.updateTask(scheduleId, payload);
     const existingReminder = remindersForEvent(scheduleId).find((item) => item.status === 'pending');

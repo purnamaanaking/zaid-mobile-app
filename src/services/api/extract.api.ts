@@ -72,6 +72,11 @@ export type UploadResponse = {
 };
 
 export const extractApi = {
+  listPrompts: async () => {
+    const { data } = await apiClient.get<{ success: boolean; data: { items: { id: string; text: string; response?: string; items?: any[] }[] } }>('/v1/prompts');
+    return data;
+  },
+
   processPrompt: async (text: string, attachments?: PromptAttachment[] | null) => {
     const { data } = await apiClient.post<ProcessPromptResponse>('/v1/prompts', {
       text,
