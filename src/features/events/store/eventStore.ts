@@ -130,7 +130,10 @@ export async function deleteEvent(eventId: string) {
 
   try {
     await eventApi.remove(eventId);
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.response?.status === 404) {
+      return;
+    }
     events = previous;
     emit();
     throw err;

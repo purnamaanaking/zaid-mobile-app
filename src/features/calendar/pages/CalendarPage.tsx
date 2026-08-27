@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { CalendarFilterBar } from '@/src/features/calendar/components/CalendarFilterBar';
@@ -18,8 +18,7 @@ import {
   fetchPromptSchedules,
 } from '@/src/features/schedule/store/promptScheduleStore';
 import { PromptSchedule } from '@/src/types/schedule.types';
-import { deleteEvent, fetchEvents, useEvents } from '@/src/features/events/store/eventStore';
-import { EventCard } from '@/src/features/events/components/EventCard';
+import { fetchEvents, useEvents } from '@/src/features/events/store/eventStore';
 import { useAppTheme } from '@/src/theme/useAppTheme';
 
 export function CalendarPage() {
@@ -37,9 +36,14 @@ export function CalendarPage() {
   const { schedules, isLoading, error } = usePromptSchedulesState();
   const { events } = useEvents();
 
-  useEffect(() => {
-    fetchPromptSchedules();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchPromptSchedules();
+      const from = dateKey(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1));
+      const to = dateKey(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0));
+      fetchEvents(from, to);
+    }, [monthDate])
+  );
 
   useEffect(() => {
     const now = new Date();
@@ -103,13 +107,6 @@ export function CalendarPage() {
       return targetDate >= sStart && targetDate <= sEnd;
     });
   }, [activeFilter, schedules, startDate, endDate, today]);
-
-  const visibleEvents = useMemo(() => events.filter((event) => {
-    const eventDate = event.starts_at ? dateKey(new Date(event.starts_at)) : null;
-    if (!eventDate) return false;
-    if (startDate && endDate) return eventDate >= startDate && eventDate <= endDate;
-    return eventDate === (startDate || dateKey(today));
-  }), [endDate, events, startDate, today]);
 
   const selectedDateLabel = useMemo(() => {
     if (activeFilter === 'upcoming') return 'Mendatang';
@@ -281,18 +278,7 @@ export function CalendarPage() {
                 </Text>
               </View>
             )}
-            {visibleEvents.length ? (
-              <View style={styles.eventList}>
-                <Text style={styles.eventHeading}>Acara</Text>
-                {visibleEvents.map((event) => (
-                  <EventCard event={event} key={event.id} onDelete={() => {
-                    deleteEvent(event.id).catch((err: any) => {
-                      Alert.alert('Gagal menghapus', err?.message || 'Terjadi kesalahan.');
-                    });
-                  }} />
-                ))}
-              </View>
-            ) : null}
+            {/* Section Acara (Event) dihapus agar tidak duplikat dengan jadwal prompt di atas */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

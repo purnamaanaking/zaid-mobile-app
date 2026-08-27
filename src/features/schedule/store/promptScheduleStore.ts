@@ -206,7 +206,11 @@ export async function deletePromptSchedule(scheduleId: string) {
     const taskReminders = remindersForEvent(scheduleId);
     for (const reminder of taskReminders) await deleteReminder(reminder.id);
     await scheduleApi.deleteTask(scheduleId);
-  } catch (err) {
+  } catch (err: any) {
+    // Jika 404 (sudah terhapus di backend via AI prompt), anggap sukses dan jangan kembalikan state
+    if (err?.response?.status === 404) {
+      return;
+    }
     schedules = previous;
     error = 'Jadwal gagal dihapus.';
     emit();

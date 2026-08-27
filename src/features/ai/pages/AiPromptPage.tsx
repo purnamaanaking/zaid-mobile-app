@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -15,7 +15,7 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AiPromptComposer } from '@/src/features/ai/components/AiPromptComposer';
@@ -257,36 +257,39 @@ export function AiPromptPage() {
     fetchReminders().catch((err) => {
       console.warn('Failed to fetch reminders for notifications', err);
     });
-
-    // Load riwayat prompt/chat dari backend
-    extractApi.listPrompts().then((res) => {
-      if (res.success && res.data?.items?.length) {
-        const historyMessages: ChatMessage[] = [];
-        res.data.items.forEach((item) => {
-          if (item.text) {
-            historyMessages.push({
-              id: `user-${item.id}`,
-              role: 'user',
-              text: item.text,
-            });
-          }
-          if (item.response) {
-            historyMessages.push({
-              id: `assistant-${item.id}`,
-              role: 'assistant',
-              status: 'success',
-              text: item.response,
-            });
-          }
-        });
-        if (historyMessages.length) {
-          setMessages(historyMessages);
-        }
-      }
-    }).catch((err) => {
-      console.warn('Failed to fetch prompt history', err);
-    });
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      extractApi.listPrompts().then((res) => {
+        if (res.success && res.data?.items?.length) {
+          const historyMessages: ChatMessage[] = [];
+          res.data.items.forEach((item) => {
+            if (item.text) {
+              historyMessages.push({
+                id: `user-${item.id}`,
+                role: 'user',
+                text: item.text,
+              });
+            }
+            if (item.response) {
+              historyMessages.push({
+                id: `assistant-${item.id}`,
+                role: 'assistant',
+                status: 'success',
+                text: item.response,
+              });
+            }
+          });
+          if (historyMessages.length) {
+            setMessages(historyMessages);
+          }
+        }
+      }).catch((err) => {
+        console.warn('Failed to fetch prompt history', err);
+      });
+    }, [])
+  );
 
   useEffect(() => {
     if (Platform.OS === 'ios') return;
