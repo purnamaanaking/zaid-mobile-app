@@ -499,7 +499,11 @@ export function AiPromptPage() {
           Alert.alert('Error', 'Gagal mengunggah file ke server.');
         }
       } catch (uploadErr: any) {
-        const errMsg = uploadErr.response?.data?.error?.message || uploadErr.message;
+        const errorData = uploadErr.response?.data;
+        const errMsg = errorData?.error?.message
+          || errorData?.message
+          || (errorData?.errors ? Object.values(errorData.errors).flat()[0] as string : null)
+          || uploadErr.message;
         console.warn('File upload failed:', errMsg);
         Alert.alert('Upload gagal', errMsg || 'Lampiran gagal diunggah. Coba lagi.');
       }
