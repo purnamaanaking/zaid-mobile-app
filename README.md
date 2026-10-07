@@ -1,6 +1,6 @@
-# ARIA — AI-Powered Schedule Management App
+# Zaid Assistant — AI-Powered Schedule Management App
 
-ARIA (Automatic Record & Intelligent Agenda) is a multiplatform mobile application built using Expo (React Native) with Large Language Model (LLM) integration for converting natural language text into structured personal schedules.
+Zaid Assistant is a multiplatform mobile application built using Expo (React Native) with Large Language Model (LLM) integration for converting natural language text into structured personal schedules.
 
 This project is part of the Internal Research Program 2025 at Telkom University under the Beginner Lecturer Research Scheme (Penelitian Dosen Pemula).
 
@@ -8,7 +8,7 @@ This project is part of the Internal Research Program 2025 at Telkom University 
 
 ## 📱 Overview
 
-ARIA helps users automatically transform daily conversation text, chat messages, or notes into calendar schedules.
+Zaid Assistant helps users automatically transform daily conversation text, chat messages, or notes into calendar schedules.
 
 Instead of manually opening calendar applications and filling forms, users only need to paste or type text such as:
 
@@ -16,7 +16,7 @@ Instead of manually opening calendar applications and filling forms, users only 
 "Besok jam 10 ada rapat koordinasi di ruang B204"
 ```
 
-ARIA will process the text using AI/LLM and generate:
+Zaid Assistant will process the text using AI/LLM and generate:
 
 - Event Title
 - Date & Time
@@ -42,7 +42,7 @@ However:
 - Manual calendar input is inefficient
 - Existing calendar apps still require manual form input
 
-ARIA bridges the gap between:
+Zaid Assistant bridges the gap between:
 Natural Language → Structured Schedule Data
 
 ---
@@ -98,7 +98,7 @@ OR
 ## 📂 Project Structure
 
 ```txt
-aria-mobile-app/
+Zaid Assistant-mobile-app/
 │
 ├── mobile-app/       # Expo React Native App
 ├── backend-api/      # Backend API Service
@@ -114,8 +114,8 @@ aria-mobile-app/
 ## 1. Clone Repository
 
 ```bash
-git clone https://github.com/your-username/aria-mobile-app.git
-cd aria-mobile-app
+git clone https://github.com/your-username/Zaid Assistant-mobile-app.git
+cd Zaid Assistant-mobile-app
 ```
 
 ---
@@ -154,7 +154,7 @@ Install:
 - Android SDK
 - Platform Tools (adb)
 
-Set Environment Variables:
+Set Environment VZaid Assistantbles:
 
 ```txt
 ANDROID_HOME=C:\Users\YOUR_USERNAME\AppData\Local\Android\Sdk
@@ -217,7 +217,7 @@ services:
 
 ---
 
-## 6. Setup Environment Variables
+## 6. Setup Environment VZaid Assistantbles
 
 Create `.env`
 
@@ -227,7 +227,7 @@ Example:
 OPENAI_API_KEY=your_api_key
 DB_HOST=localhost
 DB_PORT=3306
-DB_DATABASE=aria
+DB_DATABASE=Zaid Assistant
 DB_USERNAME=root
 DB_PASSWORD=root
 ```
@@ -315,7 +315,7 @@ Output:
 # 📄 Documentation
 
 - Proposal Penelitian Internal Universitas Telkom 2025 :contentReference[oaicite:0]{index=0}
-- PRD ARIA Mobile App :contentReference[oaicite:1]{index=1}
+- PRD Zaid Assistant Mobile App :contentReference[oaicite:1]{index=1}
 
 ---
 
